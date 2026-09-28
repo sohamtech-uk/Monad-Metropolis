@@ -17,18 +17,14 @@ import {
   type MonadStatus,
 } from "@cherry-metropolis/core";
 
-function runtimeValue(name: string): string | undefined {
-  return process.env[name];
-}
-
 export default function App() {
   const client = useMemo(() => {
     const config = createMonadRuntimeConfig({
-      rpcUrl: runtimeValue("EXPO_PUBLIC_MONAD_RPC_URL"),
-      chainId: runtimeValue("EXPO_PUBLIC_MONAD_CHAIN_ID"),
-      explorerUrl: runtimeValue("EXPO_PUBLIC_MONAD_EXPLORER_URL"),
-      ausdAddress: runtimeValue("EXPO_PUBLIC_AUSD_ADDRESS"),
-      ausdDecimals: runtimeValue("EXPO_PUBLIC_AUSD_DECIMALS"),
+      rpcUrl: process.env.EXPO_PUBLIC_MONAD_RPC_URL,
+      chainId: process.env.EXPO_PUBLIC_MONAD_CHAIN_ID,
+      explorerUrl: process.env.EXPO_PUBLIC_MONAD_EXPLORER_URL,
+      ausdAddress: process.env.EXPO_PUBLIC_AUSD_ADDRESS,
+      ausdDecimals: process.env.EXPO_PUBLIC_AUSD_DECIMALS,
     });
 
     return new MonadReadClient(config);

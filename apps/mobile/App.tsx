@@ -17,6 +17,8 @@ import {
   type MonadStatus,
 } from "@cherry-metropolis/core";
 
+import { MeraAccountCard } from "./src/MeraAccountCard";
+
 export default function App() {
   const client = useMemo(() => {
     const config = createMonadRuntimeConfig({
@@ -81,9 +83,10 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
-        <Text style={styles.title}>Monad / AUSD foundation</Text>
+        <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 1 is read-only. No wallet, signing or money movement is enabled.
+          Phase 2 adds Mera as the account layer. Identity comes from one
+          passkey; transaction signing and money movement remain disabled.
         </Text>
 
         <View style={styles.card}>
@@ -109,11 +112,19 @@ export default function App() {
           ) : null}
         </View>
 
+        <MeraAccountCard
+          onIdentity={(identity) => {
+            setAddress(identity.address);
+            setBalance(null);
+            setBalanceError(null);
+          }}
+        />
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Read an AUSD balance</Text>
           <Text style={styles.helper}>
-            Enter a Monad EVM address. This only calls balanceOf; it cannot
-            create or sign a transaction.
+            Create or recover a Mera account above to prefill its Monad
+            address, or enter any EVM address. This only calls balanceOf.
           </Text>
           <TextInput
             autoCapitalize="none"

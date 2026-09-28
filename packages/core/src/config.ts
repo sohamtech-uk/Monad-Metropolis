@@ -19,11 +19,11 @@ export type MonadRuntimeConfig = Readonly<{
 
 export function createMonadRuntimeConfig(
   overrides: Partial<{
-    rpcUrl: string;
-    chainId: number | string;
-    explorerUrl: string;
-    ausdAddress: string;
-    ausdDecimals: number | string;
+    rpcUrl: string | undefined;
+    chainId: number | string | undefined;
+    explorerUrl: string | undefined;
+    ausdAddress: string | undefined;
+    ausdDecimals: number | string | undefined;
   }> = {},
 ): MonadRuntimeConfig {
   const rpcUrl = String(

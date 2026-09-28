@@ -39,13 +39,18 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-1-foundation`**
+Current branch: **`feat/phase-2-mera-account`**
 
-Phase 1 is deliberately **read-only**: Monad connectivity, AUSD metadata/balance reads,
-the Expo mobile shell, and the Cherry Money API boundary. Mera signing comes next.
+Phase 1 established the read-only Monad/AUSD foundation and passed CI.
+
+Phase 2 adds **Mera passkey account creation and stateless recovery**. The app derives
+the same Monad EVM address from the same synced passkey without persisting PRF output,
+a seed phrase, or a private key. Transaction signing remains a later phase.
 
 See:
 
 - `docs/ARCHITECTURE.md`
 - `docs/PHASE_1.md`
+- `docs/PHASE_2.md`
+- `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`

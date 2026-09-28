@@ -1,0 +1,25 @@
+{
+  "name": "@cherry-metropolis/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "prebuild": "expo prebuild --clean",
+    "ios": "expo run:ios --device",
+    "android": "expo run:android --device",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@cherry-metropolis/core": "0.1.0",
+    "expo": "~57.0.12",
+    "react": "19.2.8",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.8.1",
+    "viem": "2.55.13"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.18",
+    "typescript": "~6.0.3"
+  }
+}

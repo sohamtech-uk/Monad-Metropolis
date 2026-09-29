@@ -23,7 +23,8 @@
     "react-native-passkey": "3.6.1",
     "react-native-safe-area-context": "~5.8.1",
     "viem": "2.55.13",
-    "@cherry-metropolis/cherry-money-client": "0.1.0"
+    "@cherry-metropolis/cherry-money-client": "0.1.0",
+    "@cherry-metropolis/envio-client": "0.1.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.18",

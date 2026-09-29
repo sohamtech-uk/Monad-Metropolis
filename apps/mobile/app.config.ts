@@ -22,6 +22,9 @@ const config: ExpoConfig = {
   },
   extra: {
     meraRpId: rpId,
+    eas: {
+      projectId: "69ed85d3-7c72-472d-be26-4bed379bafaf",
+    },
   },
 };
 

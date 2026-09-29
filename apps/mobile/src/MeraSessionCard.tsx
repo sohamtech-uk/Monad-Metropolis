@@ -57,6 +57,7 @@ type MeraSessionCardProps = {
   journeyStartedAtMs: number;
   paymentDraft: CherryMoneyPaymentDraft | null;
   onIdentity: (identity: MeraAccountIdentity) => void;
+  onTransferSettled?: (result: AusdTransferResult) => void;
 };
 
 export function MeraSessionCard({
@@ -64,6 +65,7 @@ export function MeraSessionCard({
   journeyStartedAtMs,
   paymentDraft,
   onIdentity,
+  onTransferSettled,
 }: MeraSessionCardProps) {
   const readClient = useMemo(
     () => new MonadReadClient(runtimeConfig),
@@ -283,6 +285,7 @@ export function MeraSessionCard({
       );
 
       setTransfer(result);
+      onTransferSettled?.(result);
       setNotice(
         formatUnits(result.amount, runtimeConfig.ausdDecimals) +
           " AUSD settled on Monad.",
@@ -325,12 +328,12 @@ export function MeraSessionCard({
         transfer,
       );
 
-      setTransfer(
-        Object.freeze({
-          ...transfer,
-          correlation,
-        }),
-      );
+      const nextTransfer = Object.freeze({
+        ...transfer,
+        correlation,
+      });
+      setTransfer(nextTransfer);
+      onTransferSettled?.(nextTransfer);
 
       setNotice(
         correlation.status === "confirmed"

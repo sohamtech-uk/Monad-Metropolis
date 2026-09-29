@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
 import type { MeraAccountIdentity } from "./src/mera/account";
+import type { AusdTransferResult } from "./src/mera/scopedSession";
 import {
   ActivityIndicator,
   Pressable,
@@ -23,6 +24,7 @@ import { CherryMoneyDraftCard } from "./src/CherryMoneyDraftCard";
 import { MeraSessionCard } from "./src/MeraSessionCard";
 import { MeraBusinessVaultCard } from "./src/MeraBusinessVaultCard";
 import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
+import { JudgeReadinessCard } from "./src/JudgeReadinessCard";
 
 export default function App() {
   const journeyStartedAtMs = useRef(Date.now()).current;
@@ -52,6 +54,10 @@ export default function App() {
     useState<CherryMoneyPaymentDraft | null>(null);
   const [meraIdentity, setMeraIdentity] =
     useState<MeraAccountIdentity | null>(null);
+  const [lastTransfer, setLastTransfer] =
+    useState<AusdTransferResult | null>(null);
+  const [envioIndexedCurrentPayment, setEnvioIndexedCurrentPayment] =
+    useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -99,9 +105,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 9 demonstrates Mera beyond accounts: the same passkey derives
-          isolated, namespaced encryption keys for private Cherry application
-          state that can be recovered on another synced device.
+          Phase 10 connects the full judging path: Cherry Money business
+          context → Mera passkey → Agora AUSD on Monad → settlement
+          correlation → Envio verification → Chainlink CRE evidence.
         </Text>
 
         <View style={styles.card}>
@@ -127,13 +133,32 @@ export default function App() {
           ) : null}
         </View>
 
+        <JudgeReadinessCard
+          networkConnected={status?.chainMatches === true}
+          paymentDraftSelected={paymentDraft !== null}
+          meraAccountReady={meraIdentity !== null}
+          registryConfigured={client.config.settlementRegistryAddress !== null}
+          lastPaymentTxHash={lastTransfer?.hash ?? null}
+          correlationConfirmed={
+            lastTransfer?.correlation.status === "confirmed"
+          }
+          envioConfigured={Boolean(
+            process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL?.trim(),
+          )}
+          envioIndexed={envioIndexedCurrentPayment}
+        />
+
         <CherryMoneyDraftCard
           defaultBaseUrl={
             process.env.EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL ??
             "https://cherrymoney.co.uk"
           }
           selectedDraftId={paymentDraft?.id ?? null}
-          onSelectDraft={setPaymentDraft}
+          onSelectDraft={(draft) => {
+            setPaymentDraft(draft);
+            setLastTransfer(null);
+            setEnvioIndexedCurrentPayment(false);
+          }}
         />
 
         <MeraSessionCard
@@ -146,6 +171,10 @@ export default function App() {
             setBalance(null);
             setBalanceError(null);
           }}
+          onTransferSettled={(result) => {
+            setLastTransfer(result);
+            setEnvioIndexedCurrentPayment(false);
+          }}
         />
 
         <MeraBusinessVaultCard
@@ -156,6 +185,8 @@ export default function App() {
           endpoint={process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL}
           explorerUrl={client.config.explorerUrl}
           assetDecimals={client.config.ausdDecimals}
+          focusPaymentTxHash={lastTransfer?.hash ?? null}
+          onFocusIndexed={setEnvioIndexedCurrentPayment}
         />
 
         <View style={styles.card}>

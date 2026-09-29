@@ -18,12 +18,16 @@ type SettlementAnalyticsCardProps = {
   endpoint?: string;
   explorerUrl: string;
   assetDecimals: number;
+  focusPaymentTxHash?: string | null;
+  onFocusIndexed?: (indexed: boolean) => void;
 };
 
 export function SettlementAnalyticsCard({
   endpoint,
   explorerUrl,
   assetDecimals,
+  focusPaymentTxHash,
+  onFocusIndexed,
 }: SettlementAnalyticsCardProps) {
   const client = useMemo(() => {
     if (!endpoint?.trim()) return null;
@@ -52,7 +56,17 @@ export function SettlementAnalyticsCard({
     setError(null);
 
     try {
-      setDashboard(await client.dashboard());
+      const nextDashboard = await client.dashboard();
+      setDashboard(nextDashboard);
+
+      if (focusPaymentTxHash) {
+        const indexed = nextDashboard.latestSettlements.some(
+          (settlement) =>
+            settlement.paymentTxHash.toLowerCase() ===
+            focusPaymentTxHash.toLowerCase(),
+        );
+        onFocusIndexed?.(indexed);
+      }
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -81,7 +95,7 @@ export function SettlementAnalyticsCard({
     return () => {
       clearInterval(timer);
     };
-  }, [client]);
+  }, [client, focusPaymentTxHash]);
 
   if (!endpoint?.trim()) {
     return (
@@ -150,6 +164,32 @@ export function SettlementAnalyticsCard({
 
       {dashboard ? (
         <>
+          {focusPaymentTxHash ? (
+            <View
+              style={
+                dashboard.latestSettlements.some(
+                  (settlement) =>
+                    settlement.paymentTxHash.toLowerCase() ===
+                    focusPaymentTxHash.toLowerCase(),
+                )
+                  ? styles.focusVerified
+                  : styles.focusPending
+              }
+            >
+              <Text style={styles.focusTitle}>
+                {dashboard.latestSettlements.some(
+                  (settlement) =>
+                    settlement.paymentTxHash.toLowerCase() ===
+                    focusPaymentTxHash.toLowerCase(),
+                )
+                  ? "This payment is indexed and verified ✓"
+                  : "Waiting for Envio to index this payment"}
+              </Text>
+              <Text selectable style={styles.mono}>
+                {shortHex(focusPaymentTxHash)}
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.metricGrid}>
             <Metric
               label="Verified volume · 30d"
@@ -455,6 +495,22 @@ const styles = StyleSheet.create({
     color: "#b91c1c",
     fontSize: 13,
     lineHeight: 19,
+  },
+  focusVerified: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 12,
+    gap: 5,
+    padding: 12,
+  },
+  focusPending: {
+    backgroundColor: "#fff7ed",
+    borderRadius: 12,
+    gap: 5,
+    padding: 12,
+  },
+  focusTitle: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   metricGrid: {
     flexDirection: "row",

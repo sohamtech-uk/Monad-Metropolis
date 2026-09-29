@@ -6,7 +6,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "envio"
+    "envio",
+    "cre/*"
   ],
   "engines": {
     "node": ">=24"

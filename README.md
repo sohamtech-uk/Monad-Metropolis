@@ -31,7 +31,7 @@ packages/core/                  Monad/AUSD read and payment domain
 packages/cherry-money-client/   typed Cherry Money API boundary
 packages/envio-client/          typed read-only Envio GraphQL client
 contracts/                      Monad settlement-correlation contract
-cre/                            Chainlink CRE workflow (later phase)
+cre/                            Chainlink CRE settlement verifier
 envio/                          Envio HyperIndex settlement intelligence
 docs/                           architecture, roadmap and bounty evidence
 ```
@@ -40,7 +40,7 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-9-mera-many-keys`**
+Current branch: **`feat/phase-10-e2e-integration`**
 
 Phase 1 established the read-only Monad/AUSD foundation.
 
@@ -69,11 +69,15 @@ public Envio GraphQL read model directly and shows verified AUSD volume,
 settlement count, verification rate, exceptions, recent volume and transaction
 evidence without falling back to mocked figures.
 
-Phase 9 adds **Mera One Passkey, Many Keys** as a genuinely non-wallet feature.
+Phase 9 added **Mera One Passkey, Many Keys** as a genuinely non-wallet feature.
 The same Mera passkey can evaluate isolated custom PRF namespaces for encrypted
-Ask Cherry memory and supplier-private-note state. Only portable ciphertext and
-non-secret metadata are exported; PRF outputs and derived encryption keys are
-not persisted.
+Ask Cherry memory and supplier-private-note state.
+
+Phase 10 adds the **end-to-end judging path**. Chainlink CRE now orchestrates
+Envio, a direct Monad registry read, and authenticated Cherry Money business
+context to produce deterministic reconciliation evidence. The mobile Judge Mode
+tracks the same payment through draft selection, Mera, AUSD settlement,
+correlation, Envio indexing and CRE verification.
 
 See:
 
@@ -87,6 +91,8 @@ See:
 - `docs/PHASE_7.md`
 - `docs/PHASE_8.md`
 - `docs/PHASE_9.md`
+- `docs/PHASE_10.md`
+- `docs/JUDGE_DEMO_RUNBOOK.md`
 - `docs/MERA_MANY_KEYS_RUNBOOK.md`
 - `docs/ENVIO_ANALYTICS_RUNBOOK.md`
 - `docs/SETTLEMENT_CORRELATION.md`

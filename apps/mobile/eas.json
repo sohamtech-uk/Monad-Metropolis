@@ -18,7 +18,7 @@
         "EXPO_PUBLIC_AUSD_DECIMALS": "6",
         "EXPO_PUBLIC_AUSD_FAUCET_ADDRESS": "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
         "EXPO_PUBLIC_SETTLEMENT_REGISTRY_ADDRESS": "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf",
-        "EXPO_PUBLIC_ENVIO_GRAPHQL_URL": "https://indexer.dev.hyperindex.xyz/5ea3414/v1/graphql",
+        "EXPO_PUBLIC_ENVIO_GRAPHQL_URL": "https://metropolis.cherrymoney.co.uk/graphql/",
         "EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL": "https://cherrymoney.co.uk"
       }
     },
@@ -33,7 +33,7 @@
         "EXPO_PUBLIC_AUSD_DECIMALS": "6",
         "EXPO_PUBLIC_AUSD_FAUCET_ADDRESS": "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
         "EXPO_PUBLIC_SETTLEMENT_REGISTRY_ADDRESS": "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf",
-        "EXPO_PUBLIC_ENVIO_GRAPHQL_URL": "https://indexer.dev.hyperindex.xyz/5ea3414/v1/graphql",
+        "EXPO_PUBLIC_ENVIO_GRAPHQL_URL": "https://metropolis.cherrymoney.co.uk/graphql/",
         "EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL": "https://cherrymoney.co.uk"
       }
     }

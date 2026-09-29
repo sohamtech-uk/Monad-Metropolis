@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,7 +17,11 @@ import {
   type MonadStatus,
 } from "@cherry-metropolis/core";
 
+import { MeraSessionCard } from "./src/MeraSessionCard";
+
 export default function App() {
+  const journeyStartedAtMs = useRef(Date.now()).current;
+
   const client = useMemo(() => {
     const config = createMonadRuntimeConfig({
       rpcUrl: process.env.EXPO_PUBLIC_MONAD_RPC_URL,
@@ -25,6 +29,7 @@ export default function App() {
       explorerUrl: process.env.EXPO_PUBLIC_MONAD_EXPLORER_URL,
       ausdAddress: process.env.EXPO_PUBLIC_AUSD_ADDRESS,
       ausdDecimals: process.env.EXPO_PUBLIC_AUSD_DECIMALS,
+      ausdFaucetAddress: process.env.EXPO_PUBLIC_AUSD_FAUCET_ADDRESS,
     });
 
     return new MonadReadClient(config);
@@ -81,9 +86,11 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
-        <Text style={styles.title}>Monad / AUSD foundation</Text>
+        <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 1 is read-only. No wallet, signing or money movement is enabled.
+          Phase 4 sends real testnet AUSD on Monad. One passkey prompt opens a
+          tightly scoped session, then the in-scope transfer signs without
+          another wallet prompt and waits for on-chain confirmation.
         </Text>
 
         <View style={styles.card}>
@@ -109,11 +116,21 @@ export default function App() {
           ) : null}
         </View>
 
+        <MeraSessionCard
+          runtimeConfig={client.config}
+          journeyStartedAtMs={journeyStartedAtMs}
+          onIdentity={(identity) => {
+            setAddress(identity.address);
+            setBalance(null);
+            setBalanceError(null);
+          }}
+        />
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Read an AUSD balance</Text>
           <Text style={styles.helper}>
-            Enter a Monad EVM address. This only calls balanceOf; it cannot
-            create or sign a transaction.
+            Create or recover a Mera account above to prefill its Monad
+            address, or enter any EVM address. This only calls balanceOf.
           </Text>
           <TextInput
             autoCapitalize="none"

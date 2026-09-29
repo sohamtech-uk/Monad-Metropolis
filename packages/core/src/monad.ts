@@ -1,11 +1,13 @@
 import {
   createPublicClient,
   defineChain,
+  formatEther,
   formatUnits,
   getAddress,
   http,
   parseAbi,
   type Address,
+  type Chain,
   type PublicClient,
 } from "viem";
 
@@ -14,11 +16,40 @@ import {
   type MonadRuntimeConfig,
 } from "./config";
 
-const AUSD_READ_ABI = parseAbi([
+const AUSD_ERC20_ABI = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
   "function decimals() view returns (uint8)",
   "function symbol() view returns (string)",
+  "function transfer(address to, uint256 amount) returns (bool)",
 ]);
+
+const AUSD_FAUCET_ABI = parseAbi([
+  "function requestFunds(address recipient)",
+]);
+
+function createMonadChain(config: MonadRuntimeConfig): Chain {
+  return defineChain({
+    id: config.chainId,
+    name: "Monad Testnet",
+    nativeCurrency: {
+      name: "MON",
+      symbol: "MON",
+      decimals: 18,
+    },
+    rpcUrls: {
+      default: {
+        http: [config.rpcUrl],
+      },
+    },
+    blockExplorers: {
+      default: {
+        name: "Monad Explorer",
+        url: config.explorerUrl,
+      },
+    },
+    testnet: true,
+  });
+}
 
 export type MonadStatus = Readonly<{
   configuredChainId: number;
@@ -40,37 +71,24 @@ export type AusdBalance = Readonly<{
   symbol: string;
 }>;
 
+export type NativeBalance = Readonly<{
+  account: Address;
+  raw: bigint;
+  formatted: string;
+  symbol: "MON";
+}>;
+
 export class MonadReadClient {
   readonly config: MonadRuntimeConfig;
+  readonly chain: Chain;
   readonly publicClient: PublicClient;
 
   constructor(config: MonadRuntimeConfig = createMonadRuntimeConfig()) {
     this.config = config;
-
-    const chain = defineChain({
-      id: config.chainId,
-      name: "Monad Testnet",
-      nativeCurrency: {
-        name: "MON",
-        symbol: "MON",
-        decimals: 18,
-      },
-      rpcUrls: {
-        default: {
-          http: [config.rpcUrl],
-        },
-      },
-      blockExplorers: {
-        default: {
-          name: "Monad Explorer",
-          url: config.explorerUrl,
-        },
-      },
-      testnet: true,
-    });
+    this.chain = createMonadChain(config);
 
     this.publicClient = createPublicClient({
-      chain,
+      chain: this.chain,
       transport: http(config.rpcUrl, {
         timeout: 10_000,
         retryCount: 1,
@@ -84,12 +102,12 @@ export class MonadReadClient {
       this.publicClient.getBlockNumber(),
       this.publicClient.readContract({
         address: this.config.ausdAddress,
-        abi: AUSD_READ_ABI,
+        abi: AUSD_ERC20_ABI,
         functionName: "symbol",
       }),
       this.publicClient.readContract({
         address: this.config.ausdAddress,
-        abi: AUSD_READ_ABI,
+        abi: AUSD_ERC20_ABI,
         functionName: "decimals",
       }),
     ]);
@@ -111,7 +129,7 @@ export class MonadReadClient {
 
     const raw = await this.publicClient.readContract({
       address: this.config.ausdAddress,
-      abi: AUSD_READ_ABI,
+      abi: AUSD_ERC20_ABI,
       functionName: "balanceOf",
       args: [address],
     });
@@ -126,7 +144,25 @@ export class MonadReadClient {
     });
   }
 
+  async nativeBalance(account: string): Promise<NativeBalance> {
+    const address = getAddress(account);
+    const raw = await this.publicClient.getBalance({ address });
+
+    return Object.freeze({
+      account: address,
+      raw,
+      formatted: formatEther(raw),
+      symbol: "MON",
+    });
+  }
+
   transactionUrl(hash: `0x${string}`): string {
     return `${this.config.explorerUrl}/tx/${hash}`;
   }
 }
+
+export {
+  AUSD_ERC20_ABI,
+  AUSD_FAUCET_ABI,
+  createMonadChain,
+};

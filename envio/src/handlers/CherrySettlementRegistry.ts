@@ -46,7 +46,9 @@ indexer.onEvent(
     const asset = normalise(event.params.asset);
     const registryAddress = normalise(event.srcAddress);
     const expectedRegistry = (
-      process.env.CHERRY_SETTLEMENT_REGISTRY_ADDRESS ?? ""
+      process.env.ENVIO_CHERRY_SETTLEMENT_REGISTRY_ADDRESS ??
+      process.env.CHERRY_SETTLEMENT_REGISTRY_ADDRESS ??
+      "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf"
     )
       .trim()
       .toLowerCase();
@@ -68,7 +70,7 @@ indexer.onEvent(
     if (expectedRegistry === "") {
       verificationStatus = "RegistryUnconfigured";
       verificationReason =
-        "CHERRY_SETTLEMENT_REGISTRY_ADDRESS is not configured for this indexer deployment.";
+        "The trusted CherrySettlementRegistry address is not configured for this indexer deployment.";
     } else if (registryAddress !== expectedRegistry) {
       verificationStatus = "RegistryMismatch";
       verificationReason =

@@ -21,7 +21,7 @@ otherwise.
 - sender has MON for gas;
 - sender has Agora testnet AUSD;
 - recipient test address is ready;
-- `CherrySettlementRegistry` is deployed;
+- `CherrySettlementRegistry` is deployed at `0xdcB418C6e719C40c8e1F9B446cD850330219EEFf`;
 - mobile build contains the registry address.
 
 ### Cherry Money

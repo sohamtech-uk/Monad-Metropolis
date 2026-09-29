@@ -1,7 +1,7 @@
 {
   "schedule": "0 */1 * * * *",
   "chainSelectorName": "monad-testnet",
-  "registryAddress": "0x0000000000000000000000000000000000000000",
+  "registryAddress": "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf",
   "ausdAddress": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
   "ausdDecimals": 6,
   "envioGraphqlEndpoint": "https://replace-with-public-envio-graphql.example/graphql",

@@ -12,11 +12,13 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: applicationId,
+    buildNumber: "1",
     supportsTablet: true,
     associatedDomains: [`webcredentials:${rpId}`],
   },
   android: {
     package: applicationId,
+    versionCode: 1,
   },
   extra: {
     meraRpId: rpId,

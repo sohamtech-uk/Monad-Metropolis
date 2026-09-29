@@ -6,6 +6,7 @@ const applicationId = "uk.co.cherrymoney.metropolis";
 const config: ExpoConfig = {
   name: "Cherry Pay Global",
   slug: "cherry-pay-global",
+  owner: "cherrymoney",
   scheme: "cherrypayglobal",
   version: "0.2.0",
   orientation: "portrait",
@@ -22,6 +23,9 @@ const config: ExpoConfig = {
   },
   extra: {
     meraRpId: rpId,
+    eas: {
+      projectId: "69ed85d3-7c72-472d-be26-4bed379bafaf",
+    },
   },
 };
 

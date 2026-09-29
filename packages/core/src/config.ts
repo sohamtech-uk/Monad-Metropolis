@@ -11,6 +11,9 @@ export const DEFAULT_AUSD_DECIMALS = 6;
 export const DEFAULT_AUSD_FAUCET_ADDRESS = getAddress(
   "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
 );
+export const DEFAULT_SETTLEMENT_REGISTRY_ADDRESS = getAddress(
+  "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf",
+);
 
 export type MonadRuntimeConfig = Readonly<{
   rpcUrl: string;
@@ -56,7 +59,7 @@ export function createMonadRuntimeConfig(
   }
 
   const settlementRegistryAddressRaw = String(
-    overrides.settlementRegistryAddress ?? "",
+    overrides.settlementRegistryAddress ?? DEFAULT_SETTLEMENT_REGISTRY_ADDRESS,
   ).trim();
 
   return Object.freeze({

@@ -19,8 +19,7 @@ chains:
       - name: AUSD
         address: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC"
 
-      # The Phase 6 registry is intentionally wildcard-indexed here so the
-      # public indexer can be generated before the deployment address is fixed.
-      # The handler only marks settlements verified when
-      # CHERRY_SETTLEMENT_REGISTRY_ADDRESS matches event.srcAddress.
+      # Fixed public trust anchor for the deployed Phase 6 registry.
+      # Kept in config so the free Envio Development plan needs no custom env vars.
       - name: CherrySettlementRegistry
+        address: "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf"

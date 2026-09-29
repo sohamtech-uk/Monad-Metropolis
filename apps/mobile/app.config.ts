@@ -1,18 +1,25 @@
 import type { ExpoConfig } from "expo/config";
 
+const rpId = process.env.MERA_RP_ID ?? "metropolis.cherrymoney.co.uk";
+const applicationId = "uk.co.cherrymoney.metropolis";
+
 const config: ExpoConfig = {
   name: "Cherry Pay Global",
   slug: "cherry-pay-global",
   scheme: "cherrypayglobal",
-  version: "0.1.0",
+  version: "0.2.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   ios: {
-    bundleIdentifier: "uk.co.cherrymoney.metropolis",
+    bundleIdentifier: applicationId,
     supportsTablet: true,
+    associatedDomains: [`webcredentials:${rpId}`],
   },
   android: {
-    package: "uk.co.cherrymoney.metropolis",
+    package: applicationId,
+  },
+  extra: {
+    meraRpId: rpId,
   },
 };
 

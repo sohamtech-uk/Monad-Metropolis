@@ -1,0 +1,129 @@
+name: Deploy Metropolis testnet
+
+on:
+  push:
+    branches:
+      - deploy/metropolis-testnet
+    paths:
+      - .github/workflows/deploy-metropolis-testnet.yml
+      - scripts/deploy-settlement-registry.mjs
+      - contracts/src/CherrySettlementRegistry.sol
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metropolis-testnet-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy-registry:
+    name: Deploy CherrySettlementRegistry
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: metropolis_testnet
+    outputs:
+      registry_address: ${{ steps.deploy.outputs.registry_address }}
+      transaction_hash: ${{ steps.deploy.outputs.transaction_hash }}
+      deployer_address: ${{ steps.deploy.outputs.deployer_address }}
+      block_number: ${{ steps.deploy.outputs.block_number }}
+
+    steps:
+      - name: Checkout deployment branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Compile settlement contract
+        run: npm run contracts:check
+
+      - name: Deploy registry to Monad testnet
+        id: deploy
+        env:
+          MONAD_DEPLOYER_PRIVATE_KEY: ${{ secrets.MONAD_DEPLOYER_PRIVATE_KEY }}
+          MONAD_RPC_URL: https://testnet-rpc.monad.xyz
+          DEPLOYMENT_OUTPUT_PATH: deployment/metropolis-testnet.json
+        run: |
+          set -euo pipefail
+          node scripts/deploy-settlement-registry.mjs
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: metropolis-testnet-registry
+          path: deployment/metropolis-testnet.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Deployment summary
+        env:
+          REGISTRY_ADDRESS: ${{ steps.deploy.outputs.registry_address }}
+          TRANSACTION_HASH: ${{ steps.deploy.outputs.transaction_hash }}
+          DEPLOYER_ADDRESS: ${{ steps.deploy.outputs.deployer_address }}
+          BLOCK_NUMBER: ${{ steps.deploy.outputs.block_number }}
+        run: |
+          {
+            echo "## Monad testnet deployment"
+            echo "- Registry: \`${REGISTRY_ADDRESS}\`"
+            echo "- Transaction: \`${TRANSACTION_HASH}\`"
+            echo "- Deployer: \`${DEPLOYER_ADDRESS}\`"
+            echo "- Block: \`${BLOCK_NUMBER}\`"
+            echo "- Explorer: https://testnet.monadscan.com/address/${REGISTRY_ADDRESS}"
+            echo
+            echo "Next: use this registry address as the Envio trusted registry and Cherry Pay runtime registry."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  validate-envio:
+    name: Validate Envio with deployed registry
+    needs: deploy-registry
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: metropolis_testnet
+
+    steps:
+      - name: Checkout deployment branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Generate and typecheck Envio indexer
+        env:
+          ENVIO_API_TOKEN: ${{ secrets.ENVIO_API_TOKEN }}
+          ENVIO_CHERRY_SETTLEMENT_REGISTRY_ADDRESS: ${{ needs.deploy-registry.outputs.registry_address }}
+          CHERRY_SETTLEMENT_REGISTRY_ADDRESS: ${{ needs.deploy-registry.outputs.registry_address }}
+        run: |
+          set -euo pipefail
+          test -n "${ENVIO_API_TOKEN}"
+          npm run typecheck -w @cherry-metropolis/envio-indexer
+
+      - name: Envio preparation summary
+        env:
+          REGISTRY_ADDRESS: ${{ needs.deploy-registry.outputs.registry_address }}
+        run: |
+          {
+            echo "## Envio preparation"
+            echo "- HyperIndex codegen/typecheck: passed"
+            echo "- Trusted registry for hosted Envio: \`ENVIO_CHERRY_SETTLEMENT_REGISTRY_ADDRESS=${REGISTRY_ADDRESS}\`"
+            echo "- HyperSync authentication secret: \`ENVIO_API_TOKEN\` available through the GitHub environment"
+            echo
+            echo "Envio Cloud project deployment still requires Envio Cloud authentication/project setup."
+          } >> "${GITHUB_STEP_SUMMARY}"

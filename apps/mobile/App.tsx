@@ -17,7 +17,7 @@ import {
   type MonadStatus,
 } from "@cherry-metropolis/core";
 
-import { MeraAccountCard } from "./src/MeraAccountCard";
+import { MeraSessionCard } from "./src/MeraSessionCard";
 
 export default function App() {
   const client = useMemo(() => {
@@ -85,8 +85,8 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 2 adds Mera as the account layer. Identity comes from one
-          passkey; transaction signing and money movement remain disabled.
+          Phase 3 adds short-lived Mera signing sessions. One passkey prompt
+          opens a tightly scoped payment session; money movement remains disabled.
         </Text>
 
         <View style={styles.card}>
@@ -112,7 +112,10 @@ export default function App() {
           ) : null}
         </View>
 
-        <MeraAccountCard
+        <MeraSessionCard
+          chainId={client.config.chainId}
+          assetAddress={client.config.ausdAddress}
+          assetDecimals={client.config.ausdDecimals}
           onIdentity={(identity) => {
             setAddress(identity.address);
             setBalance(null);

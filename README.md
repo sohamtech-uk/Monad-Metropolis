@@ -39,18 +39,22 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-2-mera-account`**
+Current branch: **`feat/phase-3-mera-signing-sessions`**
 
-Phase 1 established the read-only Monad/AUSD foundation and passed CI.
+Phase 1 established the read-only Monad/AUSD foundation.
 
-Phase 2 adds **Mera passkey account creation and stateless recovery**. The app derives
-the same Monad EVM address from the same synced passkey without persisting PRF output,
-a seed phrase, or a private key. Transaction signing remains a later phase.
+Phase 2 added **Mera passkey account creation and stateless recovery**.
+
+Phase 3 adds **short-lived, tightly scoped Mera signing sessions**. One passkey ceremony
+opens an in-memory session limited to Monad, AUSD, one approved recipient, value caps,
+three prompt-free authorizations, and five minutes. The current proof signs and verifies
+EIP-712 payment authorizations only; transaction broadcast comes in the Agora phase.
 
 See:
 
 - `docs/ARCHITECTURE.md`
 - `docs/PHASE_1.md`
 - `docs/PHASE_2.md`
+- `docs/PHASE_3.md`
 - `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`

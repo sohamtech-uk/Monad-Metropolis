@@ -20,6 +20,9 @@ type SettlementVerificationStatus =
 const AUSD_ADDRESS =
   "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC".toLowerCase();
 
+const SETTLEMENT_REGISTRY_ADDRESS =
+  "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf".toLowerCase();
+
 function normalise(value: string): string {
   return value.toLowerCase();
 }
@@ -45,13 +48,7 @@ indexer.onEvent(
     const recipient = normalise(event.params.recipient);
     const asset = normalise(event.params.asset);
     const registryAddress = normalise(event.srcAddress);
-    const expectedRegistry = (
-      process.env.ENVIO_CHERRY_SETTLEMENT_REGISTRY_ADDRESS ??
-      process.env.CHERRY_SETTLEMENT_REGISTRY_ADDRESS ??
-      "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf"
-    )
-      .trim()
-      .toLowerCase();
+    const expectedRegistry = SETTLEMENT_REGISTRY_ADDRESS;
 
     const transfers = await context.AusdTransfer.getWhere({
       transactionHash: { _eq: paymentTxHash },
@@ -67,11 +64,7 @@ indexer.onEvent(
     let verificationStatus: SettlementVerificationStatus = "Verified";
     let verificationReason = "AUSD transfer matches the trusted registry correlation.";
 
-    if (expectedRegistry === "") {
-      verificationStatus = "RegistryUnconfigured";
-      verificationReason =
-        "The trusted CherrySettlementRegistry address is not configured for this indexer deployment.";
-    } else if (registryAddress !== expectedRegistry) {
+    if (registryAddress !== expectedRegistry) {
       verificationStatus = "RegistryMismatch";
       verificationReason =
         "Event signature matched, but the emitting contract is not the configured Cherry settlement registry.";
@@ -120,8 +113,7 @@ indexer.onEvent(
       contractRecordedAt: event.params.recordedAt,
       blockNumber: BigInt(event.block.number),
       blockTimestamp: BigInt(event.block.timestamp),
-      trustedRegistry:
-        expectedRegistry !== "" && registryAddress === expectedRegistry,
+      trustedRegistry: registryAddress === expectedRegistry,
       verified,
       verificationStatus,
       verificationReason,

@@ -20,6 +20,7 @@ type SessionEndReason =
   | "expired"
   | "background"
   | "authorization-limit"
+  | "value-limit"
   | "replaced";
 
 type ScopedSessionStatus = Readonly<{
@@ -160,6 +161,12 @@ class ScopedMeraPaymentSession {
       authorizationCount,
       cumulativeAmount: this.usage.cumulativeAmount + request.amount,
     });
+
+    if (authorizationNumber >= this.scope.maxAuthorizations) {
+      this.end("authorization-limit");
+    } else if (this.usage.cumulativeAmount >= this.scope.maxCumulative) {
+      this.end("value-limit");
+    }
 
     return Object.freeze({
       signature,

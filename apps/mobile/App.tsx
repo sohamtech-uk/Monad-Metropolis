@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,6 +18,7 @@ import {
   type MonadStatus,
 } from "@cherry-metropolis/core";
 
+import { CherryMoneyDraftCard } from "./src/CherryMoneyDraftCard";
 import { MeraSessionCard } from "./src/MeraSessionCard";
 
 export default function App() {
@@ -41,6 +43,8 @@ export default function App() {
   const [balance, setBalance] = useState<AusdBalance | null>(null);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [paymentDraft, setPaymentDraft] =
+    useState<CherryMoneyPaymentDraft | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -88,9 +92,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 4 sends real testnet AUSD on Monad. One passkey prompt opens a
-          tightly scoped session, then the in-scope transfer signs without
-          another wallet prompt and waits for on-chain confirmation.
+          Phase 5 binds the Monad payment to a real Cherry Money payment
+          draft. Cherry Money remains the business record; Mera and Monad
+          remain the settlement layer.
         </Text>
 
         <View style={styles.card}>
@@ -116,9 +120,19 @@ export default function App() {
           ) : null}
         </View>
 
+        <CherryMoneyDraftCard
+          defaultBaseUrl={
+            process.env.EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL ??
+            "https://cherrymoney.co.uk"
+          }
+          selectedDraftId={paymentDraft?.id ?? null}
+          onSelectDraft={setPaymentDraft}
+        />
+
         <MeraSessionCard
           runtimeConfig={client.config}
           journeyStartedAtMs={journeyStartedAtMs}
+          paymentDraft={paymentDraft}
           onIdentity={(identity) => {
             setAddress(identity.address);
             setBalance(null);

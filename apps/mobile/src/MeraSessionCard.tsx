@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
 import {
   ActivityIndicator,
   AppState,
@@ -52,12 +53,14 @@ type PendingAction =
 type MeraSessionCardProps = {
   runtimeConfig: MonadRuntimeConfig;
   journeyStartedAtMs: number;
+  paymentDraft: CherryMoneyPaymentDraft | null;
   onIdentity: (identity: MeraAccountIdentity) => void;
 };
 
 export function MeraSessionCard({
   runtimeConfig,
   journeyStartedAtMs,
+  paymentDraft,
   onIdentity,
 }: MeraSessionCardProps) {
   const readClient = useMemo(
@@ -135,6 +138,35 @@ export function MeraSessionCard({
     };
   }, []);
 
+  useEffect(() => {
+    sessionRef.current?.end("replaced");
+    refreshSession();
+    setTransfer(null);
+    setFaucet(null);
+    setError(null);
+
+    if (!paymentDraft) {
+      return;
+    }
+
+    const currency = paymentDraft.currency.toUpperCase();
+    if (currency === "USD" || currency === "AUSD") {
+      setAmount(paymentDraft.amount.toFixed(2));
+      setNotice(
+        "Cherry Money payment draft selected. The AUSD amount matches the source amount because the draft is denominated in " +
+          currency +
+          ".",
+      );
+    } else {
+      setAmount("");
+      setNotice(
+        "Cherry Money draft is denominated in " +
+          currency +
+          ". Enter the quoted AUSD settlement amount separately; no FX conversion is being assumed.",
+      );
+    }
+  }, [paymentDraft?.id]);
+
   async function openSession(action: "create" | "recover") {
     setPending(action);
     setError(null);
@@ -159,6 +191,9 @@ export function MeraSessionCard({
           recipient: normalizedRecipient,
           assetDecimals: runtimeConfig.ausdDecimals,
           nowMs: Date.now(),
+          ...(paymentDraft
+            ? { reference: cherryMoneyDraftReference(paymentDraft) }
+            : {}),
         });
 
         const session = new ScopedMeraPaymentSession(live, scope);
@@ -223,14 +258,16 @@ export function MeraSessionCard({
         amount,
         runtimeConfig.ausdDecimals,
       );
-      const reference = keccak256(
-        toBytes(
-          "cherry-metropolis:" +
-            session.identity.address +
-            ":" +
-            Date.now().toString(),
-        ),
-      );
+      const reference = paymentDraft
+        ? cherryMoneyDraftReference(paymentDraft)
+        : keccak256(
+            toBytes(
+              "cherry-metropolis:" +
+                session.identity.address +
+                ":" +
+                Date.now().toString(),
+            ),
+          );
 
       const result = await session.sendAusdTransfer(
         runtimeConfig,
@@ -303,6 +340,35 @@ export function MeraSessionCard({
         Approve the recipient once with your passkey, then send an in-scope
         AUSD payment on Monad without another wallet prompt.
       </Text>
+
+      {paymentDraft ? (
+        <View style={styles.businessContext}>
+          <Text style={styles.businessEyebrow}>CHERRY MONEY PAYMENT DRAFT</Text>
+          <Text style={styles.businessTitle}>{paymentDraft.payee}</Text>
+          <Row
+            label="Source amount"
+            value={
+              paymentDraft.currency + " " + paymentDraft.amount.toFixed(2)
+            }
+          />
+          <Row
+            label="Reference"
+            value={paymentDraft.reference || "No reference"}
+          />
+          <Row label="Draft ID" value={paymentDraft.id} />
+          {paymentDraft.purpose ? (
+            <Text style={styles.businessPurpose}>{paymentDraft.purpose}</Text>
+          ) : null}
+          <Text style={styles.safe}>
+            Draft only in Cherry Money · no payment executed there
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.warning}>
+          No Cherry Money payment draft is selected. The standalone Agora testnet
+          flow still works, but Phase 5 business-context evidence is not active.
+        </Text>
+      )}
 
       <Text style={styles.label}>Passkey domain</Text>
       <Text selectable style={styles.mono}>
@@ -470,7 +536,9 @@ export function MeraSessionCard({
             </View>
           ) : null}
 
-          <Text style={styles.label}>Amount to send</Text>
+          <Text style={styles.label}>
+            {paymentDraft ? "AUSD settlement amount" : "Amount to send"}
+          </Text>
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setAmount}
@@ -483,7 +551,9 @@ export function MeraSessionCard({
             label={
               pending === "send"
                 ? "Sending AUSD…"
-                : "Send AUSD on Monad — no prompt"
+                : paymentDraft
+                  ? "Pay Cherry Money draft with AUSD — no prompt"
+                  : "Send AUSD on Monad — no prompt"
             }
             onPress={() => void sendPayment()}
             primary
@@ -507,6 +577,16 @@ export function MeraSessionCard({
               ) + " AUSD"
             }
           />
+          {paymentDraft ? (
+            <>
+              <Row label="Cherry Money draft" value={paymentDraft.id} />
+              <Row label="Payee" value={paymentDraft.payee} />
+              <Row
+                label="Business reference"
+                value={paymentDraft.reference || "No reference"}
+              />
+            </>
+          ) : null}
           <Row
             label="Recipient before"
             value={
@@ -555,10 +635,29 @@ export function MeraSessionCard({
 
       <Text style={styles.note}>
         Testnet only. AUSD is Agora's test token deployment on Monad testnet.
-        The mobile app signs the ERC-20 transfer through the in-memory Mera
-        session and waits for a confirmed Monad receipt before showing success.
+        When a Cherry Money payment draft is selected, its immutable draft ID
+        and business reference are hashed into the passkey-approved payment
+        context. Cherry Money remains draft-only in this phase; on-chain
+        settlement does not yet mark the accounting record paid.
       </Text>
     </View>
+  );
+}
+
+function cherryMoneyDraftReference(
+  draft: CherryMoneyPaymentDraft,
+): `0x${string}` {
+  return keccak256(
+    toBytes(
+      [
+        "cherry-money-payment-draft",
+        draft.id,
+        draft.payee,
+        draft.currency,
+        draft.amount.toFixed(2),
+        draft.reference,
+      ].join(":"),
+    ),
   );
 }
 
@@ -746,6 +845,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     textDecorationLine: "underline",
+  },
+  businessContext: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    gap: 8,
+    padding: 12,
+  },
+  businessEyebrow: {
+    color: "#1d4ed8",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  businessTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  businessPurpose: {
+    color: "#475569",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  safe: {
+    color: "#166534",
+    fontSize: 11,
+    fontWeight: "600",
   },
   warning: {
     backgroundColor: "#fff7ed",

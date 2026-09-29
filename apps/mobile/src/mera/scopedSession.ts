@@ -158,7 +158,7 @@ class ScopedMeraPaymentSession {
     }
 
     this.usage = Object.freeze({
-      authorizationCount,
+      authorizationCount: authorizationNumber,
       cumulativeAmount: this.usage.cumulativeAmount + request.amount,
     });
 

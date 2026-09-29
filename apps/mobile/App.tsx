@@ -32,6 +32,8 @@ export default function App() {
       ausdAddress: process.env.EXPO_PUBLIC_AUSD_ADDRESS,
       ausdDecimals: process.env.EXPO_PUBLIC_AUSD_DECIMALS,
       ausdFaucetAddress: process.env.EXPO_PUBLIC_AUSD_FAUCET_ADDRESS,
+      settlementRegistryAddress:
+        process.env.EXPO_PUBLIC_SETTLEMENT_REGISTRY_ADDRESS,
     });
 
     return new MonadReadClient(config);
@@ -92,9 +94,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 5 binds the Monad payment to a real Cherry Money payment
-          draft. Cherry Money remains the business record; Mera and Monad
-          remain the settlement layer.
+          Phase 6 adds a privacy-safe on-chain correlation record after the
+          AUSD payment confirms, linking the opaque Cherry Money payment
+          reference to the Monad transaction for later Envio/CRE verification.
         </Text>
 
         <View style={styles.card}>

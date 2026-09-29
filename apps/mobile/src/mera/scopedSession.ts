@@ -1,6 +1,7 @@
 import {
   AUSD_ERC20_ABI,
   AUSD_FAUCET_ABI,
+  CHERRY_SETTLEMENT_REGISTRY_ABI,
   SessionPolicyViolation,
   createMonadChain,
   emptyPaymentSessionUsage,
@@ -9,6 +10,7 @@ import {
   type PaymentAuthorizationRequest,
   type PaymentSessionScope,
   type PaymentSessionUsage,
+  type SettlementCorrelationResult,
 } from "@cherry-metropolis/core";
 import {
   createPublicClient,
@@ -61,6 +63,7 @@ type AusdTransferResult = Readonly<{
   confirmationMs: number;
   transactionUrl: string;
   reference: Hex;
+  correlation: SettlementCorrelationResult;
 }>;
 
 type FaucetResult = Readonly<{
@@ -223,6 +226,21 @@ class ScopedMeraPaymentSession {
     const sender = getAddress(this.liveAccount.account.address);
     const recipient = getAddress(request.recipient);
 
+    if (config.settlementRegistryAddress) {
+      const alreadyCorrelated = await publicClient.readContract({
+        address: config.settlementRegistryAddress,
+        abi: CHERRY_SETTLEMENT_REGISTRY_ABI,
+        functionName: "hasSettlement",
+        args: [sender, request.reference],
+      });
+
+      if (alreadyCorrelated) {
+        throw new Error(
+          "This Cherry Money payment reference is already correlated to a prior settlement. Create or select a new payment draft before sending again.",
+        );
+      }
+    }
+
     const [senderBalanceBefore, recipientBalanceBefore, nativeBalance] =
       await Promise.all([
         publicClient.readContract({
@@ -289,6 +307,12 @@ class ScopedMeraPaymentSession {
       }),
     ]);
 
+    const correlation = await this.recordSettlementCorrelation(
+      config,
+      request,
+      hash,
+    );
+
     this.recordUsage(request.amount);
 
     return Object.freeze({
@@ -306,7 +330,184 @@ class ScopedMeraPaymentSession {
       confirmationMs: confirmedAtMs - submittedAtMs,
       transactionUrl: config.explorerUrl + "/tx/" + hash,
       reference: request.reference,
+      correlation,
     });
+  }
+
+  async retrySettlementCorrelation(
+    config: MonadRuntimeConfig,
+    transfer: Pick<
+      AusdTransferResult,
+      "hash" | "recipient" | "amount" | "reference"
+    >,
+  ): Promise<SettlementCorrelationResult> {
+    return this.recordSettlementCorrelation(
+      config,
+      {
+        chainId: this.scope.chainId,
+        asset: this.scope.asset,
+        recipient: transfer.recipient,
+        amount: transfer.amount,
+        reference: transfer.reference,
+      },
+      transfer.hash,
+    );
+  }
+
+  private async recordSettlementCorrelation(
+    config: MonadRuntimeConfig,
+    request: PaymentAuthorizationRequest,
+    paymentTxHash: Hex,
+  ): Promise<SettlementCorrelationResult> {
+    const registryAddress = config.settlementRegistryAddress;
+
+    if (!registryAddress) {
+      return Object.freeze({
+        status: "not_configured",
+        registryAddress: null,
+        paymentReference: request.reference,
+        paymentTxHash,
+        correlationTxHash: null,
+        correlationBlockNumber: null,
+        correlationUrl: null,
+        error: null,
+      });
+    }
+
+    if (this.expireIfNeeded(Date.now())) {
+      return Object.freeze({
+        status: "failed",
+        registryAddress,
+        paymentReference: request.reference,
+        paymentTxHash,
+        correlationTxHash: null,
+        correlationBlockNumber: null,
+        correlationUrl: null,
+        error:
+          "The Mera session expired after the AUSD payment confirmed and before the correlation transaction could be signed.",
+      });
+    }
+
+    try {
+      const chain = createMonadChain(config);
+      const transport = http(config.rpcUrl, {
+        timeout: 15_000,
+        retryCount: 1,
+      });
+      const publicClient = createPublicClient({ chain, transport });
+      const walletClient = createWalletClient({
+        account: this.liveAccount.account,
+        chain,
+        transport,
+      });
+
+      const alreadyRecorded = await publicClient.readContract({
+        address: registryAddress,
+        abi: CHERRY_SETTLEMENT_REGISTRY_ABI,
+        functionName: "hasSettlement",
+        args: [getAddress(this.liveAccount.account.address), request.reference],
+      });
+
+      if (alreadyRecorded) {
+        const existing = await publicClient.readContract({
+          address: registryAddress,
+          abi: CHERRY_SETTLEMENT_REGISTRY_ABI,
+          functionName: "settlementFor",
+          args: [
+            getAddress(this.liveAccount.account.address),
+            request.reference,
+          ],
+        });
+
+        const [
+          existingPaymentTxHash,
+          existingPayer,
+          existingRecipient,
+          existingAsset,
+          existingAmount,
+        ] = existing;
+
+        const matches =
+          existingPaymentTxHash.toLowerCase() ===
+            paymentTxHash.toLowerCase() &&
+          getAddress(existingPayer) ===
+            getAddress(this.liveAccount.account.address) &&
+          getAddress(existingRecipient) ===
+            getAddress(request.recipient) &&
+          getAddress(existingAsset) === getAddress(request.asset) &&
+          existingAmount === request.amount;
+
+        if (!matches) {
+          throw new Error(
+            "This payment reference is already correlated to different settlement data.",
+          );
+        }
+
+        return Object.freeze({
+          status: "confirmed",
+          registryAddress,
+          paymentReference: request.reference,
+          paymentTxHash,
+          correlationTxHash: null,
+          correlationBlockNumber: null,
+          correlationUrl: null,
+          error: null,
+        });
+      }
+
+      const simulation = await publicClient.simulateContract({
+        account: this.liveAccount.account,
+        address: registryAddress,
+        abi: CHERRY_SETTLEMENT_REGISTRY_ABI,
+        functionName: "recordSettlement",
+        args: [
+          request.reference,
+          paymentTxHash,
+          getAddress(request.recipient),
+          getAddress(request.asset),
+          request.amount,
+        ],
+      });
+
+      const correlationTxHash = await walletClient.writeContract(
+        simulation.request,
+      );
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: correlationTxHash,
+        confirmations: 1,
+        timeout: 60_000,
+      });
+
+      if (receipt.status !== "success") {
+        throw new Error("The settlement correlation transaction reverted.");
+      }
+
+      return Object.freeze({
+        status: "confirmed",
+        registryAddress,
+        paymentReference: request.reference,
+        paymentTxHash,
+        correlationTxHash,
+        correlationBlockNumber: receipt.blockNumber,
+        correlationUrl:
+          config.explorerUrl + "/tx/" + correlationTxHash,
+        error: null,
+      });
+    } catch (error) {
+      return Object.freeze({
+        status: "failed",
+        registryAddress,
+        paymentReference: request.reference,
+        paymentTxHash,
+        correlationTxHash: null,
+        correlationBlockNumber: null,
+        correlationUrl: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Settlement correlation failed after the AUSD payment confirmed.",
+      });
+    }
   }
 
   async requestTestAusd(config: MonadRuntimeConfig): Promise<FaucetResult> {

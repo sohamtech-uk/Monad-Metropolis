@@ -20,6 +20,7 @@ import {
   type AusdBalance,
   type MonadRuntimeConfig,
   type NativeBalance,
+  type SettlementCorrelationResult,
 } from "@cherry-metropolis/core";
 import {
   formatUnits,
@@ -48,6 +49,7 @@ type PendingAction =
   | "send"
   | "faucet"
   | "refresh"
+  | "correlate"
   | null;
 
 type MeraSessionCardProps = {
@@ -300,6 +302,49 @@ export function MeraSessionCard({
       } else {
         setError(describeMeraError(caught));
       }
+    } finally {
+      setPending(null);
+      refreshSession();
+    }
+  }
+
+  async function retryCorrelation() {
+    const session = sessionRef.current;
+    if (!session || !transfer) {
+      setError("A confirmed AUSD payment and active Mera session are required.");
+      return;
+    }
+
+    setPending("correlate");
+    setError(null);
+    setNotice(null);
+
+    try {
+      const correlation = await session.retrySettlementCorrelation(
+        runtimeConfig,
+        transfer,
+      );
+
+      setTransfer(
+        Object.freeze({
+          ...transfer,
+          correlation,
+        }),
+      );
+
+      setNotice(
+        correlation.status === "confirmed"
+          ? "Settlement correlation confirmed on Monad."
+          : correlation.status === "not_configured"
+            ? "Settlement registry is not configured."
+            : "AUSD is settled, but the correlation still needs attention.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to retry settlement correlation.",
+      );
     } finally {
       setPending(null);
       refreshSession();
@@ -617,6 +662,12 @@ export function MeraSessionCard({
             url={transfer.transactionUrl}
             hash={transfer.hash}
           />
+          <CorrelationEvidence
+            correlation={transfer.correlation}
+            retryDisabled={!active || pending !== null}
+            retryPending={pending === "correlate"}
+            onRetry={() => void retryCorrelation()}
+          />
         </View>
       ) : null}
 
@@ -638,7 +689,10 @@ export function MeraSessionCard({
         When a Cherry Money payment draft is selected, its immutable draft ID
         and business reference are hashed into the passkey-approved payment
         context. Cherry Money remains draft-only in this phase; on-chain
-        settlement does not yet mark the accounting record paid.
+        settlement does not yet mark the accounting record paid. When the
+        Phase 6 registry is configured, a second non-custodial transaction
+        records only the opaque reference, payment hash, payer, recipient,
+        asset and amount for later independent verification.
       </Text>
     </View>
   );
@@ -658,6 +712,75 @@ function cherryMoneyDraftReference(
         draft.reference,
       ].join(":"),
     ),
+  );
+}
+
+function CorrelationEvidence({
+  correlation,
+  retryDisabled,
+  retryPending,
+  onRetry,
+}: {
+  correlation: SettlementCorrelationResult;
+  retryDisabled: boolean;
+  retryPending: boolean;
+  onRetry: () => void;
+}) {
+  if (correlation.status === "confirmed") {
+    return (
+      <View style={styles.correlationConfirmed}>
+        <Text style={styles.correlationTitle}>
+          Business correlation confirmed ✓
+        </Text>
+        <Text selectable style={styles.mono}>
+          Reference · {shortHash(correlation.paymentReference)}
+        </Text>
+        {correlation.registryAddress ? (
+          <Text selectable style={styles.mono}>
+            Registry · {correlation.registryAddress}
+          </Text>
+        ) : null}
+        {correlation.correlationTxHash && correlation.correlationUrl ? (
+          <TransactionLink
+            url={correlation.correlationUrl}
+            hash={correlation.correlationTxHash}
+          />
+        ) : (
+          <Text style={styles.safe}>
+            Existing matching correlation found on-chain.
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  if (correlation.status === "not_configured") {
+    return (
+      <View style={styles.correlationPending}>
+        <Text style={styles.correlationTitle}>Correlation not configured</Text>
+        <Text style={styles.businessPurpose}>
+          The AUSD payment is confirmed, but no settlement registry address is
+          configured for this build. Do not resend the payment.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.correlationFailed}>
+      <Text style={styles.correlationTitle}>
+        AUSD settled · correlation needs attention
+      </Text>
+      <Text style={styles.businessPurpose}>
+        {correlation.error ??
+          "The registry transaction did not confirm. Do not resend the AUSD payment."}
+      </Text>
+      <ActionButton
+        disabled={retryDisabled}
+        label={retryPending ? "Retrying correlation…" : "Retry correlation only"}
+        onPress={onRetry}
+      />
+    </View>
   );
 }
 
@@ -879,6 +1002,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     padding: 10,
+  },
+  correlationConfirmed: {
+    backgroundColor: "#ecfdf5",
+    borderRadius: 10,
+    gap: 6,
+    marginTop: 6,
+    padding: 10,
+  },
+  correlationPending: {
+    backgroundColor: "#fff7ed",
+    borderRadius: 10,
+    gap: 6,
+    marginTop: 6,
+    padding: 10,
+  },
+  correlationFailed: {
+    backgroundColor: "#fef2f2",
+    borderRadius: 10,
+    gap: 8,
+    marginTop: 6,
+    padding: 10,
+  },
+  correlationTitle: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   result: {
     backgroundColor: "#f8fafc",

@@ -8,6 +8,9 @@ export const DEFAULT_AUSD_ADDRESS = getAddress(
   "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
 );
 export const DEFAULT_AUSD_DECIMALS = 6;
+export const DEFAULT_AUSD_FAUCET_ADDRESS = getAddress(
+  "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
+);
 
 export type MonadRuntimeConfig = Readonly<{
   rpcUrl: string;
@@ -15,6 +18,7 @@ export type MonadRuntimeConfig = Readonly<{
   explorerUrl: string;
   ausdAddress: Address;
   ausdDecimals: number;
+  ausdFaucetAddress: Address;
 }>;
 
 export function createMonadRuntimeConfig(
@@ -24,6 +28,7 @@ export function createMonadRuntimeConfig(
     explorerUrl: string | undefined;
     ausdAddress: string | undefined;
     ausdDecimals: number | string | undefined;
+    ausdFaucetAddress: string | undefined;
   }> = {},
 ): MonadRuntimeConfig {
   const rpcUrl = String(
@@ -58,5 +63,8 @@ export function createMonadRuntimeConfig(
       String(overrides.ausdAddress ?? DEFAULT_AUSD_ADDRESS),
     ),
     ausdDecimals,
+    ausdFaucetAddress: getAddress(
+      String(overrides.ausdFaucetAddress ?? DEFAULT_AUSD_FAUCET_ADDRESS),
+    ),
   });
 }

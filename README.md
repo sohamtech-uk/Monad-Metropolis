@@ -39,13 +39,26 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-1-foundation`**
+Current branch: **`feat/phase-4-agora-ausd-mvp`**
 
-Phase 1 is deliberately **read-only**: Monad connectivity, AUSD metadata/balance reads,
-the Expo mobile shell, and the Cherry Money API boundary. Mera signing comes next.
+Phase 1 established the read-only Monad/AUSD foundation.
+
+Phase 2 added **Mera passkey account creation and stateless recovery**.
+
+Phase 3 added **short-lived, tightly scoped Mera signing sessions**.
+
+Phase 4 adds the **real Agora AUSD payment MVP**: the Mera account can request test AUSD,
+simulate an ERC-20 transfer, sign it from the scoped in-memory session, broadcast it to
+Monad testnet, wait for a successful receipt, and prove receipt by re-reading the
+recipient's AUSD balance.
 
 See:
 
 - `docs/ARCHITECTURE.md`
 - `docs/PHASE_1.md`
+- `docs/PHASE_2.md`
+- `docs/PHASE_3.md`
+- `docs/PHASE_4.md`
+- `docs/AGORA_TESTNET.md`
+- `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`

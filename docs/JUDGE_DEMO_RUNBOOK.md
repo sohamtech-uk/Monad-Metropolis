@@ -43,7 +43,7 @@ Use a short-lived demo Sanctum token.
 
 - Phase 7 indexer is deployed;
 - trusted registry address is configured;
-- public GraphQL endpoint is configured in the mobile build: `https://indexer.dev.hyperindex.xyz/5ea3414/v1/graphql`.
+- stable public GraphQL proxy is configured in the mobile build: `https://metropolis.cherrymoney.co.uk/graphql/`.
 
 ### CRE
 
@@ -54,7 +54,7 @@ Update:
 with:
 
 - deployed registry address;
-- public Envio GraphQL endpoint.
+- stable public Envio GraphQL proxy.
 
 Export only for the CRE process:
 

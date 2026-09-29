@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,6 +20,8 @@ import {
 import { MeraSessionCard } from "./src/MeraSessionCard";
 
 export default function App() {
+  const journeyStartedAtMs = useRef(Date.now()).current;
+
   const client = useMemo(() => {
     const config = createMonadRuntimeConfig({
       rpcUrl: process.env.EXPO_PUBLIC_MONAD_RPC_URL,
@@ -27,6 +29,7 @@ export default function App() {
       explorerUrl: process.env.EXPO_PUBLIC_MONAD_EXPLORER_URL,
       ausdAddress: process.env.EXPO_PUBLIC_AUSD_ADDRESS,
       ausdDecimals: process.env.EXPO_PUBLIC_AUSD_DECIMALS,
+      ausdFaucetAddress: process.env.EXPO_PUBLIC_AUSD_FAUCET_ADDRESS,
     });
 
     return new MonadReadClient(config);
@@ -85,8 +88,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 3 adds short-lived Mera signing sessions. One passkey prompt
-          opens a tightly scoped payment session; money movement remains disabled.
+          Phase 4 sends real testnet AUSD on Monad. One passkey prompt opens a
+          tightly scoped session, then the in-scope transfer signs without
+          another wallet prompt and waits for on-chain confirmation.
         </Text>
 
         <View style={styles.card}>
@@ -113,9 +117,8 @@ export default function App() {
         </View>
 
         <MeraSessionCard
-          chainId={client.config.chainId}
-          assetAddress={client.config.ausdAddress}
-          assetDecimals={client.config.ausdDecimals}
+          runtimeConfig={client.config}
+          journeyStartedAtMs={journeyStartedAtMs}
           onIdentity={(identity) => {
             setAddress(identity.address);
             setBalance(null);

@@ -40,7 +40,7 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-8-settlement-analytics`**
+Current branch: **`feat/phase-9-mera-many-keys`**
 
 Phase 1 established the read-only Monad/AUSD foundation.
 
@@ -64,10 +64,16 @@ transfers and Phase 6 correlations on Monad Testnet, independently verifies the
 referenced transfer, preserves mismatch diagnostics, and derives counterparty,
 route and daily settlement analytics.
 
-Phase 8 adds **Cherry Settlement Analytics** in the mobile app. It consumes the
+Phase 8 added **Cherry Settlement Analytics** in the mobile app. It consumes the
 public Envio GraphQL read model directly and shows verified AUSD volume,
 settlement count, verification rate, exceptions, recent volume and transaction
 evidence without falling back to mocked figures.
+
+Phase 9 adds **Mera One Passkey, Many Keys** as a genuinely non-wallet feature.
+The same Mera passkey can evaluate isolated custom PRF namespaces for encrypted
+Ask Cherry memory and supplier-private-note state. Only portable ciphertext and
+non-secret metadata are exported; PRF outputs and derived encryption keys are
+not persisted.
 
 See:
 
@@ -80,6 +86,8 @@ See:
 - `docs/PHASE_6.md`
 - `docs/PHASE_7.md`
 - `docs/PHASE_8.md`
+- `docs/PHASE_9.md`
+- `docs/MERA_MANY_KEYS_RUNBOOK.md`
 - `docs/ENVIO_ANALYTICS_RUNBOOK.md`
 - `docs/SETTLEMENT_CORRELATION.md`
 - `docs/CHERRY_MONEY_BRIDGE.md`

@@ -24,7 +24,10 @@
     "react-native-safe-area-context": "~5.8.1",
     "viem": "2.55.13",
     "@cherry-metropolis/cherry-money-client": "0.1.0",
-    "@cherry-metropolis/envio-client": "0.1.0"
+    "@cherry-metropolis/envio-client": "0.1.0",
+    "@noble/ciphers": "2.4.0",
+    "@noble/hashes": "2.3.0",
+    "@scure/base": "2.3.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.18",

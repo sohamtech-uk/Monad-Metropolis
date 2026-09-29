@@ -20,6 +20,7 @@ import {
 
 import { CherryMoneyDraftCard } from "./src/CherryMoneyDraftCard";
 import { MeraSessionCard } from "./src/MeraSessionCard";
+import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
 
 export default function App() {
   const journeyStartedAtMs = useRef(Date.now()).current;
@@ -94,9 +95,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 6 adds a privacy-safe on-chain correlation record after the
-          AUSD payment confirms, linking the opaque Cherry Money payment
-          reference to the Monad transaction for later Envio/CRE verification.
+          Phase 8 turns independently verified Envio HyperIndex data into a
+          live settlement dashboard: volume, verification health, recent
+          settlements and correlation exceptions.
         </Text>
 
         <View style={styles.card}>
@@ -140,6 +141,12 @@ export default function App() {
             setBalance(null);
             setBalanceError(null);
           }}
+        />
+
+        <SettlementAnalyticsCard
+          endpoint={process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL}
+          explorerUrl={client.config.explorerUrl}
+          assetDecimals={client.config.ausdDecimals}
         />
 
         <View style={styles.card}>

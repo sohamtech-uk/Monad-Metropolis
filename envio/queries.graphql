@@ -1,0 +1,60 @@
+# Latest verified Cherry settlements
+query LatestVerifiedSettlements {
+  Settlement(
+    where: { verified: { _eq: true } }
+    order_by: { settledAt: desc }
+    limit: 20
+  ) {
+    id
+    paymentReference
+    paymentTxHash
+    correlationTxHash
+    payer
+    recipient
+    asset
+    amount
+    settledAt
+    registryAddress
+  }
+}
+
+# Daily verified volume and mismatch health
+query DailySettlementMetrics {
+  DailySettlementMetric(order_by: { date: desc }, limit: 30) {
+    date
+    correlationCount
+    verifiedCount
+    mismatchCount
+    verifiedVolume
+  }
+}
+
+# Counterparty activity
+query CounterpartyActivity($address: String!) {
+  SettlementCounterparty(where: { address: { _eq: $address } }) {
+    address
+    sentCount
+    receivedCount
+    totalSent
+    totalReceived
+    firstSeenAt
+    lastSeenAt
+  }
+}
+
+# Correlation verification diagnostics
+query CorrelationDiagnostics {
+  SettlementCorrelation(
+    order_by: { blockTimestamp: desc }
+    limit: 50
+  ) {
+    paymentReference
+    paymentTxHash
+    correlationTxHash
+    registryAddress
+    trustedRegistry
+    verified
+    verificationStatus
+    verificationReason
+  }
+}

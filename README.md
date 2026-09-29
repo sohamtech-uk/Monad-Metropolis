@@ -31,7 +31,7 @@ packages/core/                  Monad/AUSD read and payment domain
 packages/cherry-money-client/   typed Cherry Money API boundary
 contracts/                      Monad settlement-correlation contract
 cre/                            Chainlink CRE workflow (later phase)
-envio/                          Envio HyperIndex project (later phase)
+envio/                          Envio HyperIndex settlement intelligence
 docs/                           architecture, roadmap and bounty evidence
 ```
 
@@ -39,7 +39,7 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-6-settlement-correlation`**
+Current branch: **`feat/phase-7-envio-hyperindex`**
 
 Phase 1 established the read-only Monad/AUSD foundation.
 
@@ -58,6 +58,11 @@ transaction hash, payer, recipient, asset and amount in a second non-custodial
 transaction. The registry does not mark Cherry Money paid; Envio/CRE will independently
 verify the referenced transfer before later reconciliation.
 
+Phase 7 adds **Envio HyperIndex settlement intelligence**. It indexes Agora AUSD
+transfers and Phase 6 correlations on Monad Testnet, independently verifies the
+referenced transfer, preserves mismatch diagnostics, and derives counterparty,
+route and daily settlement analytics for the Phase 8 dashboard.
+
 See:
 
 - `docs/ARCHITECTURE.md`
@@ -67,6 +72,7 @@ See:
 - `docs/PHASE_4.md`
 - `docs/PHASE_5.md`
 - `docs/PHASE_6.md`
+- `docs/PHASE_7.md`
 - `docs/SETTLEMENT_CORRELATION.md`
 - `docs/CHERRY_MONEY_BRIDGE.md`
 - `docs/AGORA_TESTNET.md`

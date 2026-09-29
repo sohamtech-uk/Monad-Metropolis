@@ -1,0 +1,88 @@
+enum SettlementVerificationStatus {
+  Verified
+  RegistryUnconfigured
+  RegistryMismatch
+  AssetMismatch
+  TransferMissing
+  PayerMismatch
+  RecipientMismatch
+  AmountMismatch
+}
+
+type AusdTransfer {
+  id: ID!
+  transactionHash: String! @index
+  logIndex: Int!
+  from: String! @index
+  to: String! @index
+  amount: BigInt!
+  blockNumber: BigInt! @index
+  blockTimestamp: BigInt! @index
+}
+
+type SettlementCorrelation {
+  id: ID!
+  paymentReference: String! @index
+  paymentTxHash: String! @index
+  correlationTxHash: String! @index
+  payer: String! @index
+  recipient: String! @index
+  asset: String! @index
+  amount: BigInt!
+  registryAddress: String! @index
+  contractRecordedAt: BigInt!
+  blockNumber: BigInt! @index
+  blockTimestamp: BigInt! @index
+  trustedRegistry: Boolean!
+  verified: Boolean!
+  verificationStatus: SettlementVerificationStatus! @index
+  verificationReason: String!
+  transferId: String
+}
+
+type Settlement {
+  id: ID!
+  paymentReference: String! @index
+  paymentTxHash: String! @index
+  correlationTxHash: String! @index
+  transferId: String!
+  payer: String! @index
+  recipient: String! @index
+  asset: String! @index
+  amount: BigInt!
+  registryAddress: String! @index
+  paymentBlockNumber: BigInt! @index
+  correlationBlockNumber: BigInt! @index
+  settledAt: BigInt! @index
+  verified: Boolean!
+}
+
+type SettlementCounterparty {
+  id: ID!
+  address: String! @index
+  sentCount: BigInt!
+  receivedCount: BigInt!
+  totalSent: BigInt!
+  totalReceived: BigInt!
+  firstSeenAt: BigInt!
+  lastSeenAt: BigInt!
+}
+
+type SettlementRoute {
+  id: ID!
+  payer: String! @index
+  recipient: String! @index
+  paymentCount: BigInt!
+  totalVolume: BigInt!
+  firstSeenAt: BigInt!
+  lastSeenAt: BigInt!
+}
+
+type DailySettlementMetric {
+  id: ID!
+  date: String! @index
+  correlationCount: BigInt!
+  verifiedCount: BigInt!
+  mismatchCount: BigInt!
+  verifiedVolume: BigInt!
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
+import type { MeraAccountIdentity } from "./src/mera/account";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,6 +21,7 @@ import {
 
 import { CherryMoneyDraftCard } from "./src/CherryMoneyDraftCard";
 import { MeraSessionCard } from "./src/MeraSessionCard";
+import { MeraBusinessVaultCard } from "./src/MeraBusinessVaultCard";
 import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
 
 export default function App() {
@@ -48,6 +50,8 @@ export default function App() {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [paymentDraft, setPaymentDraft] =
     useState<CherryMoneyPaymentDraft | null>(null);
+  const [meraIdentity, setMeraIdentity] =
+    useState<MeraAccountIdentity | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -95,9 +99,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 8 turns independently verified Envio HyperIndex data into a
-          live settlement dashboard: volume, verification health, recent
-          settlements and correlation exceptions.
+          Phase 9 demonstrates Mera beyond accounts: the same passkey derives
+          isolated, namespaced encryption keys for private Cherry application
+          state that can be recovered on another synced device.
         </Text>
 
         <View style={styles.card}>
@@ -137,10 +141,15 @@ export default function App() {
           journeyStartedAtMs={journeyStartedAtMs}
           paymentDraft={paymentDraft}
           onIdentity={(identity) => {
+            setMeraIdentity(identity);
             setAddress(identity.address);
             setBalance(null);
             setBalanceError(null);
           }}
+        />
+
+        <MeraBusinessVaultCard
+          accountCredentialId={meraIdentity?.credentialId ?? null}
         />
 
         <SettlementAnalyticsCard

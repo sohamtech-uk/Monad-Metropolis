@@ -4,11 +4,13 @@
 
 Deploy `CherrySettlementRegistry` to Monad testnet and record the address.
 
-Configure the Envio indexer:
+The deployed registry is committed directly in `envio/config.yaml` as:
 
-```dotenv
-CHERRY_SETTLEMENT_REGISTRY_ADDRESS=0x...
+```text
+0xdcB418C6e719C40c8e1F9B446cD850330219EEFf
 ```
+
+No paid Envio custom environment variable is required for this public address.
 
 ## 2. Deploy the Phase 7 indexer
 
@@ -16,7 +18,7 @@ From `envio/`:
 
 ```bash
 cp .env.example .env
-# configure ENVIO_API_TOKEN and CHERRY_SETTLEMENT_REGISTRY_ADDRESS
+# For local development only, fill ENVIO_API_TOKEN if your HyperSync setup requires it.
 
 npm run codegen
 npm run typecheck

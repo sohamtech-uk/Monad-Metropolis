@@ -43,7 +43,7 @@ Use a short-lived demo Sanctum token.
 
 - Phase 7 indexer is deployed;
 - trusted registry address is configured;
-- public GraphQL endpoint is configured in the mobile build.
+- public GraphQL endpoint is configured in the mobile build: `https://indexer.dev.hyperindex.xyz/5ea3414/v1/graphql`.
 
 ### CRE
 

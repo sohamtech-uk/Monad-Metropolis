@@ -14,7 +14,11 @@ contracts:
 
 chains:
   - id: 10143 # Monad Testnet — first-class HyperSync network in Envio
-    start_block: 0
+    # Start just before the funded deployer / registry deployment window.
+    # Monad Testnet is currently served via RPC in Envio Development, so avoiding
+    # a genesis scan keeps the free deployment practical while still covering
+    # every CherrySettlementRegistry event and demo AUSD transfer.
+    start_block: 66776000
     contracts:
       - name: AUSD
         address: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC"

@@ -1,0 +1,28 @@
+name: Validate Envio Endpoint
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/validate-envio-endpoint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Envio GraphQL
+        env:
+          ENVIO_GRAPHQL_URL: https://indexer.dev.hyperindex.xyz/5ea3414/v1/graphql
+        run: |
+          set -euo pipefail
+          BODY='{"query":"query { __typename Settlement(limit: 1) { id verified } DailySettlementMetric(limit: 1) { date verifiedCount } }"}'
+          RESPONSE="$(curl --fail-with-body --silent --show-error             --connect-timeout 15 --max-time 45             -H 'content-type: application/json'             --data "$BODY"             "$ENVIO_GRAPHQL_URL")"
+          printf '%s
+' "$RESPONSE"
+          if printf '%s' "$RESPONSE" | grep -q '"errors"'; then
+            echo "::error::Envio GraphQL returned errors"
+            exit 1
+          fi
+          printf '%s' "$RESPONSE" | grep -q '"data"'

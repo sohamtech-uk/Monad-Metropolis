@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,6 +18,7 @@ import {
   type MonadStatus,
 } from "@cherry-metropolis/core";
 
+import { CherryMoneyDraftCard } from "./src/CherryMoneyDraftCard";
 import { MeraSessionCard } from "./src/MeraSessionCard";
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
       ausdAddress: process.env.EXPO_PUBLIC_AUSD_ADDRESS,
       ausdDecimals: process.env.EXPO_PUBLIC_AUSD_DECIMALS,
       ausdFaucetAddress: process.env.EXPO_PUBLIC_AUSD_FAUCET_ADDRESS,
+      settlementRegistryAddress:
+        process.env.EXPO_PUBLIC_SETTLEMENT_REGISTRY_ADDRESS,
     });
 
     return new MonadReadClient(config);
@@ -41,6 +45,8 @@ export default function App() {
   const [balance, setBalance] = useState<AusdBalance | null>(null);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [paymentDraft, setPaymentDraft] =
+    useState<CherryMoneyPaymentDraft | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -88,9 +94,9 @@ export default function App() {
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
-          Phase 4 sends real testnet AUSD on Monad. One passkey prompt opens a
-          tightly scoped session, then the in-scope transfer signs without
-          another wallet prompt and waits for on-chain confirmation.
+          Phase 6 adds a privacy-safe on-chain correlation record after the
+          AUSD payment confirms, linking the opaque Cherry Money payment
+          reference to the Monad transaction for later Envio/CRE verification.
         </Text>
 
         <View style={styles.card}>
@@ -116,9 +122,19 @@ export default function App() {
           ) : null}
         </View>
 
+        <CherryMoneyDraftCard
+          defaultBaseUrl={
+            process.env.EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL ??
+            "https://cherrymoney.co.uk"
+          }
+          selectedDraftId={paymentDraft?.id ?? null}
+          onSelectDraft={setPaymentDraft}
+        />
+
         <MeraSessionCard
           runtimeConfig={client.config}
           journeyStartedAtMs={journeyStartedAtMs}
+          paymentDraft={paymentDraft}
           onIdentity={(identity) => {
             setAddress(identity.address);
             setBalance(null);

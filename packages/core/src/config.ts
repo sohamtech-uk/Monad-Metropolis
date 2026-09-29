@@ -19,6 +19,7 @@ export type MonadRuntimeConfig = Readonly<{
   ausdAddress: Address;
   ausdDecimals: number;
   ausdFaucetAddress: Address;
+  settlementRegistryAddress: Address | null;
 }>;
 
 export function createMonadRuntimeConfig(
@@ -29,6 +30,7 @@ export function createMonadRuntimeConfig(
     ausdAddress: string | undefined;
     ausdDecimals: number | string | undefined;
     ausdFaucetAddress: string | undefined;
+    settlementRegistryAddress: string | undefined;
   }> = {},
 ): MonadRuntimeConfig {
   const rpcUrl = String(
@@ -53,6 +55,10 @@ export function createMonadRuntimeConfig(
     throw new Error("AUSD decimals must be an integer between 0 and 36.");
   }
 
+  const settlementRegistryAddressRaw = String(
+    overrides.settlementRegistryAddress ?? "",
+  ).trim();
+
   return Object.freeze({
     rpcUrl,
     chainId,
@@ -66,5 +72,9 @@ export function createMonadRuntimeConfig(
     ausdFaucetAddress: getAddress(
       String(overrides.ausdFaucetAddress ?? DEFAULT_AUSD_FAUCET_ADDRESS),
     ),
+    settlementRegistryAddress:
+      settlementRegistryAddressRaw === ""
+        ? null
+        : getAddress(settlementRegistryAddressRaw),
   });
 }

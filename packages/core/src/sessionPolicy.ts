@@ -20,6 +20,7 @@ type PaymentSessionScope = Readonly<{
   maxPerPayment: bigint;
   maxCumulative: bigint;
   maxAuthorizations: number;
+  reference: Hex | null;
 }>;
 
 type PaymentSessionUsage = Readonly<{
@@ -40,6 +41,7 @@ type SessionPolicyViolationCode =
   | "CHAIN_CHANGED"
   | "ASSET_CHANGED"
   | "RECIPIENT_CHANGED"
+  | "REFERENCE_CHANGED"
   | "AMOUNT_INVALID"
   | "PAYMENT_LIMIT_EXCEEDED"
   | "CUMULATIVE_LIMIT_EXCEEDED"
@@ -66,6 +68,7 @@ function createPaymentSessionScope(options: {
   maxPerPayment?: string;
   maxCumulative?: string;
   maxAuthorizations?: number;
+  reference?: Hex;
 }): PaymentSessionScope {
   const nowMs = options.nowMs ?? Date.now();
   const ttlMs = options.ttlMs ?? DEFAULT_SESSION_TTL_MS;
@@ -115,6 +118,7 @@ function createPaymentSessionScope(options: {
     maxPerPayment,
     maxCumulative,
     maxAuthorizations,
+    reference: options.reference ?? null,
   });
 }
 
@@ -149,6 +153,16 @@ function validatePaymentAuthorization(
     throw new SessionPolicyViolation(
       "RECIPIENT_CHANGED",
       "The recipient changed. Confirm the new recipient with your passkey.",
+    );
+  }
+
+  if (
+    scope.reference !== null &&
+    request.reference.toLowerCase() !== scope.reference.toLowerCase()
+  ) {
+    throw new SessionPolicyViolation(
+      "REFERENCE_CHANGED",
+      "The Cherry Money payment context changed. Confirm the new payment draft with your passkey.",
     );
   }
 

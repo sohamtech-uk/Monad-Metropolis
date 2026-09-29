@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
 import {
   ActivityIndicator,
   AppState,
@@ -19,6 +20,7 @@ import {
   type AusdBalance,
   type MonadRuntimeConfig,
   type NativeBalance,
+  type SettlementCorrelationResult,
 } from "@cherry-metropolis/core";
 import {
   formatUnits,
@@ -47,17 +49,20 @@ type PendingAction =
   | "send"
   | "faucet"
   | "refresh"
+  | "correlate"
   | null;
 
 type MeraSessionCardProps = {
   runtimeConfig: MonadRuntimeConfig;
   journeyStartedAtMs: number;
+  paymentDraft: CherryMoneyPaymentDraft | null;
   onIdentity: (identity: MeraAccountIdentity) => void;
 };
 
 export function MeraSessionCard({
   runtimeConfig,
   journeyStartedAtMs,
+  paymentDraft,
   onIdentity,
 }: MeraSessionCardProps) {
   const readClient = useMemo(
@@ -135,6 +140,35 @@ export function MeraSessionCard({
     };
   }, []);
 
+  useEffect(() => {
+    sessionRef.current?.end("replaced");
+    refreshSession();
+    setTransfer(null);
+    setFaucet(null);
+    setError(null);
+
+    if (!paymentDraft) {
+      return;
+    }
+
+    const currency = paymentDraft.currency.toUpperCase();
+    if (currency === "USD" || currency === "AUSD") {
+      setAmount(paymentDraft.amount.toFixed(2));
+      setNotice(
+        "Cherry Money payment draft selected. The AUSD amount matches the source amount because the draft is denominated in " +
+          currency +
+          ".",
+      );
+    } else {
+      setAmount("");
+      setNotice(
+        "Cherry Money draft is denominated in " +
+          currency +
+          ". Enter the quoted AUSD settlement amount separately; no FX conversion is being assumed.",
+      );
+    }
+  }, [paymentDraft?.id]);
+
   async function openSession(action: "create" | "recover") {
     setPending(action);
     setError(null);
@@ -159,6 +193,9 @@ export function MeraSessionCard({
           recipient: normalizedRecipient,
           assetDecimals: runtimeConfig.ausdDecimals,
           nowMs: Date.now(),
+          ...(paymentDraft
+            ? { reference: cherryMoneyDraftReference(paymentDraft) }
+            : {}),
         });
 
         const session = new ScopedMeraPaymentSession(live, scope);
@@ -223,14 +260,16 @@ export function MeraSessionCard({
         amount,
         runtimeConfig.ausdDecimals,
       );
-      const reference = keccak256(
-        toBytes(
-          "cherry-metropolis:" +
-            session.identity.address +
-            ":" +
-            Date.now().toString(),
-        ),
-      );
+      const reference = paymentDraft
+        ? cherryMoneyDraftReference(paymentDraft)
+        : keccak256(
+            toBytes(
+              "cherry-metropolis:" +
+                session.identity.address +
+                ":" +
+                Date.now().toString(),
+            ),
+          );
 
       const result = await session.sendAusdTransfer(
         runtimeConfig,
@@ -263,6 +302,49 @@ export function MeraSessionCard({
       } else {
         setError(describeMeraError(caught));
       }
+    } finally {
+      setPending(null);
+      refreshSession();
+    }
+  }
+
+  async function retryCorrelation() {
+    const session = sessionRef.current;
+    if (!session || !transfer) {
+      setError("A confirmed AUSD payment and active Mera session are required.");
+      return;
+    }
+
+    setPending("correlate");
+    setError(null);
+    setNotice(null);
+
+    try {
+      const correlation = await session.retrySettlementCorrelation(
+        runtimeConfig,
+        transfer,
+      );
+
+      setTransfer(
+        Object.freeze({
+          ...transfer,
+          correlation,
+        }),
+      );
+
+      setNotice(
+        correlation.status === "confirmed"
+          ? "Settlement correlation confirmed on Monad."
+          : correlation.status === "not_configured"
+            ? "Settlement registry is not configured."
+            : "AUSD is settled, but the correlation still needs attention.",
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to retry settlement correlation.",
+      );
     } finally {
       setPending(null);
       refreshSession();
@@ -303,6 +385,35 @@ export function MeraSessionCard({
         Approve the recipient once with your passkey, then send an in-scope
         AUSD payment on Monad without another wallet prompt.
       </Text>
+
+      {paymentDraft ? (
+        <View style={styles.businessContext}>
+          <Text style={styles.businessEyebrow}>CHERRY MONEY PAYMENT DRAFT</Text>
+          <Text style={styles.businessTitle}>{paymentDraft.payee}</Text>
+          <Row
+            label="Source amount"
+            value={
+              paymentDraft.currency + " " + paymentDraft.amount.toFixed(2)
+            }
+          />
+          <Row
+            label="Reference"
+            value={paymentDraft.reference || "No reference"}
+          />
+          <Row label="Draft ID" value={paymentDraft.id} />
+          {paymentDraft.purpose ? (
+            <Text style={styles.businessPurpose}>{paymentDraft.purpose}</Text>
+          ) : null}
+          <Text style={styles.safe}>
+            Draft only in Cherry Money · no payment executed there
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.warning}>
+          No Cherry Money payment draft is selected. The standalone Agora testnet
+          flow still works, but Phase 5 business-context evidence is not active.
+        </Text>
+      )}
 
       <Text style={styles.label}>Passkey domain</Text>
       <Text selectable style={styles.mono}>
@@ -470,7 +581,9 @@ export function MeraSessionCard({
             </View>
           ) : null}
 
-          <Text style={styles.label}>Amount to send</Text>
+          <Text style={styles.label}>
+            {paymentDraft ? "AUSD settlement amount" : "Amount to send"}
+          </Text>
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setAmount}
@@ -483,7 +596,9 @@ export function MeraSessionCard({
             label={
               pending === "send"
                 ? "Sending AUSD…"
-                : "Send AUSD on Monad — no prompt"
+                : paymentDraft
+                  ? "Pay Cherry Money draft with AUSD — no prompt"
+                  : "Send AUSD on Monad — no prompt"
             }
             onPress={() => void sendPayment()}
             primary
@@ -507,6 +622,16 @@ export function MeraSessionCard({
               ) + " AUSD"
             }
           />
+          {paymentDraft ? (
+            <>
+              <Row label="Cherry Money draft" value={paymentDraft.id} />
+              <Row label="Payee" value={paymentDraft.payee} />
+              <Row
+                label="Business reference"
+                value={paymentDraft.reference || "No reference"}
+              />
+            </>
+          ) : null}
           <Row
             label="Recipient before"
             value={
@@ -537,6 +662,12 @@ export function MeraSessionCard({
             url={transfer.transactionUrl}
             hash={transfer.hash}
           />
+          <CorrelationEvidence
+            correlation={transfer.correlation}
+            retryDisabled={!active || pending !== null}
+            retryPending={pending === "correlate"}
+            onRetry={() => void retryCorrelation()}
+          />
         </View>
       ) : null}
 
@@ -555,9 +686,100 @@ export function MeraSessionCard({
 
       <Text style={styles.note}>
         Testnet only. AUSD is Agora's test token deployment on Monad testnet.
-        The mobile app signs the ERC-20 transfer through the in-memory Mera
-        session and waits for a confirmed Monad receipt before showing success.
+        When a Cherry Money payment draft is selected, its immutable draft ID
+        and business reference are hashed into the passkey-approved payment
+        context. Cherry Money remains draft-only in this phase; on-chain
+        settlement does not yet mark the accounting record paid. When the
+        Phase 6 registry is configured, a second non-custodial transaction
+        records only the opaque reference, payment hash, payer, recipient,
+        asset and amount for later independent verification.
       </Text>
+    </View>
+  );
+}
+
+function cherryMoneyDraftReference(
+  draft: CherryMoneyPaymentDraft,
+): `0x${string}` {
+  return keccak256(
+    toBytes(
+      [
+        "cherry-money-payment-draft",
+        draft.id,
+        draft.payee,
+        draft.currency,
+        draft.amount.toFixed(2),
+        draft.reference,
+      ].join(":"),
+    ),
+  );
+}
+
+function CorrelationEvidence({
+  correlation,
+  retryDisabled,
+  retryPending,
+  onRetry,
+}: {
+  correlation: SettlementCorrelationResult;
+  retryDisabled: boolean;
+  retryPending: boolean;
+  onRetry: () => void;
+}) {
+  if (correlation.status === "confirmed") {
+    return (
+      <View style={styles.correlationConfirmed}>
+        <Text style={styles.correlationTitle}>
+          Business correlation confirmed ✓
+        </Text>
+        <Text selectable style={styles.mono}>
+          Reference · {shortHash(correlation.paymentReference)}
+        </Text>
+        {correlation.registryAddress ? (
+          <Text selectable style={styles.mono}>
+            Registry · {correlation.registryAddress}
+          </Text>
+        ) : null}
+        {correlation.correlationTxHash && correlation.correlationUrl ? (
+          <TransactionLink
+            url={correlation.correlationUrl}
+            hash={correlation.correlationTxHash}
+          />
+        ) : (
+          <Text style={styles.safe}>
+            Existing matching correlation found on-chain.
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  if (correlation.status === "not_configured") {
+    return (
+      <View style={styles.correlationPending}>
+        <Text style={styles.correlationTitle}>Correlation not configured</Text>
+        <Text style={styles.businessPurpose}>
+          The AUSD payment is confirmed, but no settlement registry address is
+          configured for this build. Do not resend the payment.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.correlationFailed}>
+      <Text style={styles.correlationTitle}>
+        AUSD settled · correlation needs attention
+      </Text>
+      <Text style={styles.businessPurpose}>
+        {correlation.error ??
+          "The registry transaction did not confirm. Do not resend the AUSD payment."}
+      </Text>
+      <ActionButton
+        disabled={retryDisabled}
+        label={retryPending ? "Retrying correlation…" : "Retry correlation only"}
+        onPress={onRetry}
+      />
     </View>
   );
 }
@@ -747,6 +969,32 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textDecorationLine: "underline",
   },
+  businessContext: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    gap: 8,
+    padding: 12,
+  },
+  businessEyebrow: {
+    color: "#1d4ed8",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  businessTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  businessPurpose: {
+    color: "#475569",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  safe: {
+    color: "#166534",
+    fontSize: 11,
+    fontWeight: "600",
+  },
   warning: {
     backgroundColor: "#fff7ed",
     borderRadius: 10,
@@ -754,6 +1002,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     padding: 10,
+  },
+  correlationConfirmed: {
+    backgroundColor: "#ecfdf5",
+    borderRadius: 10,
+    gap: 6,
+    marginTop: 6,
+    padding: 10,
+  },
+  correlationPending: {
+    backgroundColor: "#fff7ed",
+    borderRadius: 10,
+    gap: 6,
+    marginTop: 6,
+    padding: 10,
+  },
+  correlationFailed: {
+    backgroundColor: "#fef2f2",
+    borderRadius: 10,
+    gap: 8,
+    marginTop: 6,
+    padding: 10,
+  },
+  correlationTitle: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   result: {
     backgroundColor: "#f8fafc",

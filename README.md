@@ -29,7 +29,7 @@ accounting codebase here.
 apps/mobile/                    Cherry Pay Global mobile app
 packages/core/                  Monad/AUSD read and payment domain
 packages/cherry-money-client/   typed Cherry Money API boundary
-contracts/                      Monad contracts (later phase)
+contracts/                      Monad settlement-correlation contract
 cre/                            Chainlink CRE workflow (later phase)
 envio/                          Envio HyperIndex project (later phase)
 docs/                           architecture, roadmap and bounty evidence
@@ -39,7 +39,7 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-4-agora-ausd-mvp`**
+Current branch: **`feat/phase-6-settlement-correlation`**
 
 Phase 1 established the read-only Monad/AUSD foundation.
 
@@ -47,10 +47,16 @@ Phase 2 added **Mera passkey account creation and stateless recovery**.
 
 Phase 3 added **short-lived, tightly scoped Mera signing sessions**.
 
-Phase 4 adds the **real Agora AUSD payment MVP**: the Mera account can request test AUSD,
-simulate an ERC-20 transfer, sign it from the scoped in-memory session, broadcast it to
-Monad testnet, wait for a successful receipt, and prove receipt by re-reading the
-recipient's AUSD balance.
+Phase 4 added the **real Agora AUSD payment MVP**.
+
+Phase 5 bound the settlement flow to a **real Cherry Money payment draft** through the
+existing authenticated WebMCP bridge.
+
+Phase 6 adds a **privacy-safe settlement correlation registry** on Monad. After an AUSD
+payment confirms, Cherry Pay can record the opaque business reference, payment
+transaction hash, payer, recipient, asset and amount in a second non-custodial
+transaction. The registry does not mark Cherry Money paid; Envio/CRE will independently
+verify the referenced transfer before later reconciliation.
 
 See:
 
@@ -59,6 +65,10 @@ See:
 - `docs/PHASE_2.md`
 - `docs/PHASE_3.md`
 - `docs/PHASE_4.md`
+- `docs/PHASE_5.md`
+- `docs/PHASE_6.md`
+- `docs/SETTLEMENT_CORRELATION.md`
+- `docs/CHERRY_MONEY_BRIDGE.md`
 - `docs/AGORA_TESTNET.md`
 - `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`

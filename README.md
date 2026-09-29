@@ -39,16 +39,18 @@ docs/                           architecture, roadmap and bounty evidence
 
 Feature work is developed on branches and merged into `main` through pull requests.
 
-Current branch: **`feat/phase-3-mera-signing-sessions`**
+Current branch: **`feat/phase-4-agora-ausd-mvp`**
 
 Phase 1 established the read-only Monad/AUSD foundation.
 
 Phase 2 added **Mera passkey account creation and stateless recovery**.
 
-Phase 3 adds **short-lived, tightly scoped Mera signing sessions**. One passkey ceremony
-opens an in-memory session limited to Monad, AUSD, one approved recipient, value caps,
-three prompt-free authorizations, and five minutes. The current proof signs and verifies
-EIP-712 payment authorizations only; transaction broadcast comes in the Agora phase.
+Phase 3 added **short-lived, tightly scoped Mera signing sessions**.
+
+Phase 4 adds the **real Agora AUSD payment MVP**: the Mera account can request test AUSD,
+simulate an ERC-20 transfer, sign it from the scoped in-memory session, broadcast it to
+Monad testnet, wait for a successful receipt, and prove receipt by re-reading the
+recipient's AUSD balance.
 
 See:
 
@@ -56,5 +58,7 @@ See:
 - `docs/PHASE_1.md`
 - `docs/PHASE_2.md`
 - `docs/PHASE_3.md`
+- `docs/PHASE_4.md`
+- `docs/AGORA_TESTNET.md`
 - `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`

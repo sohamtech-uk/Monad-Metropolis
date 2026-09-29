@@ -1,0 +1,19 @@
+{
+  "name": "@cherry-metropolis/envio-indexer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "codegen": "envio codegen",
+    "typecheck": "envio codegen && tsc --noEmit",
+    "dev": "envio dev",
+    "start": "envio start"
+  },
+  "dependencies": {
+    "envio": "3.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "~6.0.3"
+  }
+}

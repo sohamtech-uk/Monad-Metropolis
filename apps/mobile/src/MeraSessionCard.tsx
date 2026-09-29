@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -12,8 +13,12 @@ import {
   DEFAULT_MAX_AUTHORIZATIONS,
   DEFAULT_MAX_CUMULATIVE,
   DEFAULT_MAX_PER_PAYMENT,
+  MonadReadClient,
   SessionPolicyViolation,
   createPaymentSessionScope,
+  type AusdBalance,
+  type MonadRuntimeConfig,
+  type NativeBalance,
 } from "@cherry-metropolis/core";
 import {
   formatUnits,
@@ -21,7 +26,6 @@ import {
   keccak256,
   parseUnits,
   toBytes,
-  type Address,
 } from "viem";
 
 import {
@@ -31,23 +35,36 @@ import {
   type MeraAccountIdentity,
 } from "./mera/account";
 import { rpId } from "./mera/config";
-import { ScopedMeraPaymentSession } from "./mera/scopedSession";
+import {
+  ScopedMeraPaymentSession,
+  type AusdTransferResult,
+  type FaucetResult,
+} from "./mera/scopedSession";
 
-type PendingAction = "create" | "recover" | "sign" | null;
+type PendingAction =
+  | "create"
+  | "recover"
+  | "send"
+  | "faucet"
+  | "refresh"
+  | null;
 
 type MeraSessionCardProps = {
-  chainId: number;
-  assetAddress: Address;
-  assetDecimals: number;
+  runtimeConfig: MonadRuntimeConfig;
+  journeyStartedAtMs: number;
   onIdentity: (identity: MeraAccountIdentity) => void;
 };
 
 export function MeraSessionCard({
-  chainId,
-  assetAddress,
-  assetDecimals,
+  runtimeConfig,
+  journeyStartedAtMs,
   onIdentity,
 }: MeraSessionCardProps) {
+  const readClient = useMemo(
+    () => new MonadReadClient(runtimeConfig),
+    [runtimeConfig],
+  );
+
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("25");
   const [identity, setIdentity] = useState<MeraAccountIdentity | null>(null);
@@ -58,7 +75,13 @@ export function MeraSessionCard({
   const [authorizationCount, setAuthorizationCount] = useState(0);
   const [cumulativeAmount, setCumulativeAmount] = useState(0n);
   const [ceremonyMs, setCeremonyMs] = useState<number | null>(null);
-  const [signatureMs, setSignatureMs] = useState<number | null>(null);
+  const [senderAusd, setSenderAusd] = useState<AusdBalance | null>(null);
+  const [senderMon, setSenderMon] = useState<NativeBalance | null>(null);
+  const [transfer, setTransfer] = useState<AusdTransferResult | null>(null);
+  const [faucet, setFaucet] = useState<FaucetResult | null>(null);
+  const [timeToFirstConfirmedMs, setTimeToFirstConfirmedMs] =
+    useState<number | null>(null);
+
   const sessionRef = useRef<ScopedMeraPaymentSession | null>(null);
 
   function refreshSession() {
@@ -84,6 +107,15 @@ export function MeraSessionCard({
     }
   }
 
+  async function refreshBalances(account: string) {
+    const [ausd, mon] = await Promise.all([
+      readClient.ausdBalance(account),
+      readClient.nativeBalance(account),
+    ]);
+    setSenderAusd(ausd);
+    setSenderMon(mon);
+  }
+
   useEffect(() => {
     const timer = setInterval(refreshSession, 1_000);
     const appState = AppState.addEventListener("change", (state) => {
@@ -107,7 +139,8 @@ export function MeraSessionCard({
     setPending(action);
     setError(null);
     setNotice(null);
-    setSignatureMs(null);
+    setTransfer(null);
+    setFaucet(null);
 
     try {
       const normalizedRecipient = getAddress(recipient);
@@ -121,10 +154,10 @@ export function MeraSessionCard({
 
       try {
         const scope = createPaymentSessionScope({
-          chainId,
-          asset: assetAddress,
+          chainId: runtimeConfig.chainId,
+          asset: runtimeConfig.ausdAddress,
           recipient: normalizedRecipient,
-          assetDecimals,
+          assetDecimals: runtimeConfig.ausdDecimals,
           nowMs: Date.now(),
         });
 
@@ -134,9 +167,10 @@ export function MeraSessionCard({
         onIdentity(session.identity);
         setCeremonyMs(Date.now() - startedAt);
         setNotice(
-          "Payment session opened. In-scope authorizations now sign without another passkey prompt.",
+          "Payment session opened. The next in-scope AUSD transfer signs without another passkey prompt.",
         );
         refreshSession();
+        await refreshBalances(session.identity.address);
       } catch (caught) {
         live.end();
         throw caught;
@@ -148,20 +182,47 @@ export function MeraSessionCard({
     }
   }
 
-  async function signAuthorization() {
+  async function requestTestAusd() {
     const session = sessionRef.current;
     if (!session) {
       setError("Open a passkey payment session first.");
       return;
     }
 
-    setPending("sign");
+    setPending("faucet");
     setError(null);
     setNotice(null);
 
     try {
-      const startedAt = Date.now();
-      const paymentAmount = parseUnits(amount, assetDecimals);
+      const result = await session.requestTestAusd(runtimeConfig);
+      setFaucet(result);
+      setNotice("Agora testnet AUSD faucet transaction confirmed.");
+      await refreshBalances(result.account);
+    } catch (caught) {
+      setError(describeMeraError(caught));
+    } finally {
+      setPending(null);
+      refreshSession();
+    }
+  }
+
+  async function sendPayment() {
+    const session = sessionRef.current;
+    if (!session) {
+      setError("Open a passkey payment session first.");
+      return;
+    }
+
+    setPending("send");
+    setError(null);
+    setNotice(null);
+    setTransfer(null);
+
+    try {
+      const paymentAmount = parseUnits(
+        amount,
+        runtimeConfig.ausdDecimals,
+      );
       const reference = keccak256(
         toBytes(
           "cherry-metropolis:" +
@@ -171,23 +232,28 @@ export function MeraSessionCard({
         ),
       );
 
-      const signed = await session.authorizePayment({
-        chainId,
-        asset: assetAddress,
-        recipient: getAddress(recipient),
-        amount: paymentAmount,
-        reference,
-      });
-
-      setSignatureMs(Date.now() - startedAt);
-      setNotice(
-        "Prompt-free authorization #" +
-          signed.authorizationNumber.toString() +
-          " signed and recovered to " +
-          shortAddress(signed.recoveredAddress) +
-          ".",
+      const result = await session.sendAusdTransfer(
+        runtimeConfig,
+        {
+          chainId: runtimeConfig.chainId,
+          asset: runtimeConfig.ausdAddress,
+          recipient: getAddress(recipient),
+          amount: paymentAmount,
+          reference,
+        },
       );
-      refreshSession();
+
+      setTransfer(result);
+      setNotice(
+        formatUnits(result.amount, runtimeConfig.ausdDecimals) +
+          " AUSD settled on Monad.",
+      );
+
+      if (timeToFirstConfirmedMs === null) {
+        setTimeToFirstConfirmedMs(result.confirmedAtMs - journeyStartedAtMs);
+      }
+
+      await refreshBalances(result.sender);
     } catch (caught) {
       if (caught instanceof SessionPolicyViolation) {
         setError(
@@ -197,7 +263,20 @@ export function MeraSessionCard({
       } else {
         setError(describeMeraError(caught));
       }
+    } finally {
+      setPending(null);
       refreshSession();
+    }
+  }
+
+  async function refreshFunding() {
+    if (!identity) return;
+    setPending("refresh");
+    setError(null);
+    try {
+      await refreshBalances(identity.address);
+    } catch (caught) {
+      setError(describeMeraError(caught));
     } finally {
       setPending(null);
     }
@@ -211,17 +290,18 @@ export function MeraSessionCard({
 
   const active = Boolean(sessionRef.current?.status().active);
   const scope = sessionRef.current?.scope;
+  const hasGas = senderMon !== null && senderMon.raw > 0n;
+  const hasAusd = senderAusd !== null && senderAusd.raw > 0n;
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>MERA SCOPED SESSION</Text>
+      <Text style={styles.eyebrow}>AGORA AUSD · MERA · MONAD</Text>
       <Text style={styles.title}>
-        One prompt, then a tightly bounded payment burst.
+        Send AUSD cross-border with one passkey.
       </Text>
       <Text style={styles.body}>
-        The passkey opens a short in-memory Mera signing session. Prompt-free
-        signing is limited to one network, AUSD, one recipient, capped amounts,
-        three authorizations, and five minutes.
+        Approve the recipient once with your passkey, then send an in-scope
+        AUSD payment on Monad without another wallet prompt.
       </Text>
 
       <Text style={styles.label}>Passkey domain</Text>
@@ -229,7 +309,7 @@ export function MeraSessionCard({
         {rpId}
       </Text>
 
-      <Text style={styles.label}>Approved recipient</Text>
+      <Text style={styles.label}>Recipient</Text>
       <TextInput
         autoCapitalize="none"
         autoCorrect={false}
@@ -246,7 +326,7 @@ export function MeraSessionCard({
           label={
             pending === "create"
               ? "Waiting for passkey…"
-              : "Create + open session"
+              : "Create + approve recipient"
           }
           onPress={() => void openSession("create")}
           primary
@@ -256,7 +336,7 @@ export function MeraSessionCard({
           label={
             pending === "recover"
               ? "Waiting for passkey…"
-              : "Recover + open session"
+              : "Recover + approve recipient"
           }
           onPress={() => void openSession("recover")}
         />
@@ -269,11 +349,31 @@ export function MeraSessionCard({
       {identity ? (
         <View style={styles.identity}>
           <Text style={styles.status}>
-            {active ? "Session active" : "Account recovered"}
+            {active ? "Payment session active" : "Mera account recovered"}
           </Text>
           <Text selectable style={styles.address}>
             {identity.address}
           </Text>
+        </View>
+      ) : null}
+
+      {identity ? (
+        <View style={styles.scope}>
+          <Row
+            label="AUSD balance"
+            value={senderAusd ? senderAusd.formatted + " AUSD" : "Loading…"}
+          />
+          <Row
+            label="Gas balance"
+            value={senderMon ? senderMon.formatted + " MON" : "Loading…"}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={pending !== null}
+            onPress={() => void refreshFunding()}
+          >
+            <Text style={styles.link}>Refresh balances</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -283,14 +383,24 @@ export function MeraSessionCard({
           <Row label="Asset" value="AUSD" />
           <Row
             label="Per payment"
-            value={formatUnits(scope.maxPerPayment, assetDecimals) + " AUSD"}
+            value={
+              formatUnits(
+                scope.maxPerPayment,
+                runtimeConfig.ausdDecimals,
+              ) + " AUSD"
+            }
           />
           <Row
             label="Session total"
-            value={formatUnits(scope.maxCumulative, assetDecimals) + " AUSD"}
+            value={
+              formatUnits(
+                scope.maxCumulative,
+                runtimeConfig.ausdDecimals,
+              ) + " AUSD"
+            }
           />
           <Row
-            label="Approvals"
+            label="Payments"
             value={
               authorizationCount.toString() +
               "/" +
@@ -298,8 +408,13 @@ export function MeraSessionCard({
             }
           />
           <Row
-            label="Used"
-            value={formatUnits(cumulativeAmount, assetDecimals) + " AUSD"}
+            label="Sent"
+            value={
+              formatUnits(
+                cumulativeAmount,
+                runtimeConfig.ausdDecimals,
+              ) + " AUSD"
+            }
           />
           <Row label="Expires in" value={formatRemaining(remainingMs)} />
         </View>
@@ -307,52 +422,162 @@ export function MeraSessionCard({
         <Text style={styles.scopeHint}>
           Default scope: max {DEFAULT_MAX_PER_PAYMENT} AUSD/payment,{" "}
           {DEFAULT_MAX_CUMULATIVE} AUSD total, {DEFAULT_MAX_AUTHORIZATIONS}{" "}
-          prompt-free authorizations.
+          prompt-free payments.
         </Text>
       )}
 
       {active ? (
         <>
-          <Text style={styles.label}>Authorization amount</Text>
+          {!hasGas ? (
+            <Text style={styles.warning}>
+              This account needs MON for gas. Fund the Mera address from the
+              Monad testnet faucet before requesting AUSD or sending.
+            </Text>
+          ) : null}
+
+          <ActionButton
+            disabled={pending !== null || !hasGas}
+            label={
+              pending === "faucet"
+                ? "Requesting test AUSD…"
+                : "Request Agora test AUSD"
+            }
+            onPress={() => void requestTestAusd()}
+          />
+
+          {faucet ? (
+            <View style={styles.result}>
+              <Text style={styles.status}>Test AUSD funded</Text>
+              <Row
+                label="Before"
+                value={
+                  formatUnits(
+                    faucet.balanceBefore,
+                    runtimeConfig.ausdDecimals,
+                  ) + " AUSD"
+                }
+              />
+              <Row
+                label="After"
+                value={
+                  formatUnits(
+                    faucet.balanceAfter,
+                    runtimeConfig.ausdDecimals,
+                  ) + " AUSD"
+                }
+              />
+              <TransactionLink url={faucet.transactionUrl} hash={faucet.hash} />
+            </View>
+          ) : null}
+
+          <Text style={styles.label}>Amount to send</Text>
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setAmount}
             style={styles.input}
             value={amount}
           />
+
           <ActionButton
-            disabled={pending !== null}
+            disabled={pending !== null || !hasGas || !hasAusd}
             label={
-              pending === "sign"
-                ? "Signing…"
-                : "Sign payment authorization — no prompt"
+              pending === "send"
+                ? "Sending AUSD…"
+                : "Send AUSD on Monad — no prompt"
             }
-            onPress={() => void signAuthorization()}
+            onPress={() => void sendPayment()}
             primary
           />
+
           <Pressable accessibilityRole="button" onPress={endSession}>
             <Text style={styles.link}>End session now</Text>
           </Pressable>
         </>
       ) : null}
 
+      {transfer ? (
+        <View style={styles.success}>
+          <Text style={styles.successTitle}>AUSD settled ✓</Text>
+          <Row
+            label="Amount"
+            value={
+              formatUnits(
+                transfer.amount,
+                runtimeConfig.ausdDecimals,
+              ) + " AUSD"
+            }
+          />
+          <Row
+            label="Recipient before"
+            value={
+              formatUnits(
+                transfer.recipientBalanceBefore,
+                runtimeConfig.ausdDecimals,
+              ) + " AUSD"
+            }
+          />
+          <Row
+            label="Recipient after"
+            value={
+              formatUnits(
+                transfer.recipientBalanceAfter,
+                runtimeConfig.ausdDecimals,
+              ) + " AUSD"
+            }
+          />
+          <Row
+            label="Confirmation"
+            value={formatLatency(transfer.confirmationMs)}
+          />
+          <Row
+            label="Block"
+            value={transfer.blockNumber.toString()}
+          />
+          <TransactionLink
+            url={transfer.transactionUrl}
+            hash={transfer.hash}
+          />
+        </View>
+      ) : null}
+
       {ceremonyMs !== null ? (
         <Row label="Passkey ceremony" value={formatLatency(ceremonyMs)} />
       ) : null}
-      {signatureMs !== null ? (
-        <Row label="Prompt-free signature" value={formatLatency(signatureMs)} />
+      {timeToFirstConfirmedMs !== null ? (
+        <Row
+          label="Landing → confirmed"
+          value={formatLatency(timeToFirstConfirmedMs)}
+        />
       ) : null}
 
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Text style={styles.note}>
-        Changing recipient, chain, asset, or exceeding the amount/session limits
-        is rejected before signing and requires a new passkey-authorized scope.
-        This phase signs EIP-712 payment authorizations only; it does not
-        broadcast transactions.
+        Testnet only. AUSD is Agora's test token deployment on Monad testnet.
+        The mobile app signs the ERC-20 transfer through the in-memory Mera
+        session and waits for a confirmed Monad receipt before showing success.
       </Text>
     </View>
+  );
+}
+
+function TransactionLink({
+  url,
+  hash,
+}: {
+  url: string;
+  hash: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => void Linking.openURL(url)}
+    >
+      <Text selectable style={styles.link}>
+        View transaction · {shortHash(hash)}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -410,8 +635,8 @@ function formatLatency(ms: number): string {
     : (ms / 1_000).toFixed(2) + " s";
 }
 
-function shortAddress(address: string): string {
-  return address.slice(0, 6) + "…" + address.slice(-4);
+function shortHash(hash: string): string {
+  return hash.slice(0, 10) + "…" + hash.slice(-8);
 }
 
 const styles = StyleSheet.create({
@@ -521,6 +746,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     textDecorationLine: "underline",
+  },
+  warning: {
+    backgroundColor: "#fff7ed",
+    borderRadius: 10,
+    color: "#9a3412",
+    fontSize: 13,
+    lineHeight: 19,
+    padding: 10,
+  },
+  result: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    gap: 8,
+    padding: 12,
+  },
+  success: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 12,
+    gap: 8,
+    padding: 12,
+  },
+  successTitle: {
+    color: "#166534",
+    fontSize: 17,
+    fontWeight: "700",
   },
   notice: {
     color: "#166534",

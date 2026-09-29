@@ -1,0 +1,105 @@
+name: Deploy Monad Testnet Registry
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-monad-testnet.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy CherrySettlementRegistry
+    runs-on: ubuntu-latest
+    environment: metropolis_testnet
+    env:
+      MONAD_RPC_URL: https://testnet-rpc.monad.xyz
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Configure Foundry for Monad
+        run: |
+          cat > foundry.toml <<'EOF'
+          [profile.default]
+          src = "contracts/src"
+          out = "out"
+          libs = ["lib"]
+          network = "monad"
+          eth-rpc-url = "https://testnet-rpc.monad.xyz"
+          chain_id = 10143
+          EOF
+          forge --version
+          cast --version
+
+      - name: Check deployer
+        id: deployer
+        env:
+          MONAD_DEPLOYER_PRIVATE_KEY: ${{ secrets.MONAD_DEPLOYER_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MONAD_DEPLOYER_PRIVATE_KEY:-}" ]; then
+            echo "::error::MONAD_DEPLOYER_PRIVATE_KEY is not available in environment metropolis_testnet."
+            exit 1
+          fi
+
+          DEPLOYER="$(cast wallet address --private-key "$MONAD_DEPLOYER_PRIVATE_KEY")"
+          BALANCE_WEI="$(cast balance "$DEPLOYER" --rpc-url "$MONAD_RPC_URL")"
+          BALANCE_MON="$(cast from-wei "$BALANCE_WEI")"
+
+          echo "deployer=$DEPLOYER" >> "$GITHUB_OUTPUT"
+          echo "balance_wei=$BALANCE_WEI" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Monad deployer"
+            echo "- Address: `$DEPLOYER`"
+            echo "- Balance: `$BALANCE_MON MON`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$BALANCE_WEI" = "0" ]; then
+            echo "::error::Deployer has 0 MON. Fund $DEPLOYER on Monad Testnet, then re-run this workflow."
+            exit 42
+          fi
+
+      - name: Compile registry
+        run: forge build
+
+      - name: Deploy CherrySettlementRegistry
+        id: registry
+        env:
+          MONAD_DEPLOYER_PRIVATE_KEY: ${{ secrets.MONAD_DEPLOYER_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          OUTPUT="$(forge create contracts/src/CherrySettlementRegistry.sol:CherrySettlementRegistry             --private-key "$MONAD_DEPLOYER_PRIVATE_KEY"             --rpc-url "$MONAD_RPC_URL"             --broadcast 2>&1)"
+          printf '%s\n' "$OUTPUT"
+
+          REGISTRY_ADDRESS="$(printf '%s\n' "$OUTPUT" | sed -n 's/^Deployed to: //p' | tail -1 | tr -d '\r')"
+          TX_HASH="$(printf '%s\n' "$OUTPUT" | sed -n 's/^Transaction hash: //p' | tail -1 | tr -d '\r')"
+
+          if ! printf '%s' "$REGISTRY_ADDRESS" | grep -Eq '^0x[0-9a-fA-F]{40}$'; then
+            echo "::error::Could not parse deployed registry address."
+            exit 1
+          fi
+
+          CODE="$(cast code "$REGISTRY_ADDRESS" --rpc-url "$MONAD_RPC_URL")"
+          if [ "$CODE" = "0x" ]; then
+            echo "::error::No contract bytecode found at $REGISTRY_ADDRESS after deployment."
+            exit 1
+          fi
+
+          echo "address=$REGISTRY_ADDRESS" >> "$GITHUB_OUTPUT"
+          echo "tx_hash=$TX_HASH" >> "$GITHUB_OUTPUT"
+          {
+            echo "### CherrySettlementRegistry deployed"
+            echo "- Address: `$REGISTRY_ADDRESS`"
+            echo "- Transaction: `$TX_HASH`"
+            echo "- Explorer: https://testnet.monadscan.com/address/$REGISTRY_ADDRESS"
+          } >> "$GITHUB_STEP_SUMMARY"

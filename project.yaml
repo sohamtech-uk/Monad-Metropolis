@@ -1,0 +1,12 @@
+# Chainlink CRE project settings.
+# Used by `cre workflow simulate` for the Monad testnet reconciliation workflow.
+
+staging-settings:
+  rpcs:
+    - chain-name: monad-testnet
+      url: https://testnet-rpc.monad.xyz
+
+production-settings:
+  rpcs:
+    - chain-name: monad-testnet
+      url: https://testnet-rpc.monad.xyz

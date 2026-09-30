@@ -9,7 +9,7 @@ function withCredentialManagerDomain(config, props = {}) {
     "metropolis.cherrymoney.co.uk";
   const assetLinksUrl =
     "https://" + rpId + "/.well-known/assetlinks.json";
-  const assetStatements = JSON.stringify([{ include: assetLinksUrl }]);
+  // Android string resources require embedded JSON quotation marks to be escaped.\n  // Credential Manager parses this resource as a Digital Asset Links statement list.\n  const assetStatements = JSON.stringify([{ include: assetLinksUrl }]).replace(\n    /"/g,\n    '\\\\\\\"',\n  );
 
   config = withAndroidManifest(config, (androidConfig) => {
     const application =

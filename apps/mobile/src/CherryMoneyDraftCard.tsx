@@ -15,6 +15,8 @@ import {
 
 type PendingAction = "load" | "create" | null;
 
+const PLACEHOLDER_COLOR = "#94a3b8";
+
 type CherryMoneyDraftCardProps = {
   defaultBaseUrl: string;
   selectedDraftId: string | null;
@@ -240,6 +242,7 @@ export function CherryMoneyDraftCard({
           <TextInput
             onChangeText={setPayee}
             placeholder="Payee / supplier"
+            placeholderTextColor={PLACEHOLDER_COLOR}
             style={styles.input}
             value={payee}
           />
@@ -247,18 +250,21 @@ export function CherryMoneyDraftCard({
             keyboardType="decimal-pad"
             onChangeText={setAmount}
             placeholder={"Amount in " + workspace.company.currency}
+            placeholderTextColor={PLACEHOLDER_COLOR}
             style={styles.input}
             value={amount}
           />
           <TextInput
             onChangeText={setReference}
             placeholder="Reference"
+            placeholderTextColor={PLACEHOLDER_COLOR}
             style={styles.input}
             value={reference}
           />
           <TextInput
             onChangeText={setPurpose}
             placeholder="Purpose"
+            placeholderTextColor={PLACEHOLDER_COLOR}
             style={styles.input}
             value={purpose}
           />
@@ -368,6 +374,7 @@ const styles = StyleSheet.create({
     borderColor: "#cbd5e1",
     borderRadius: 12,
     borderWidth: 1,
+    color: "#0f172a",
     paddingHorizontal: 14,
     paddingVertical: 12,
   },

@@ -150,6 +150,8 @@ Judge Mode:
 From the repository:
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
+
 cre workflow simulate cre/settlement-verifier \
   --target staging-settings \
   --non-interactive

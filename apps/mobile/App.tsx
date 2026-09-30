@@ -26,8 +26,17 @@ import { MeraBusinessVaultCard } from "./src/MeraBusinessVaultCard";
 import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
 import { JudgeReadinessCard } from "./src/JudgeReadinessCard";
 
+type StepNumber = 1 | 2 | 3;
+
+const STEPS: ReadonlyArray<{ step: StepNumber; label: string }> = [
+  { step: 1, label: "Network" },
+  { step: 2, label: "Cherry Money" },
+  { step: 3, label: "Mera payment" },
+];
+
 export default function App() {
   const journeyStartedAtMs = useRef(Date.now()).current;
+  const [currentStep, setCurrentStep] = useState<StepNumber>(1);
 
   const client = useMemo(() => {
     const config = createMonadRuntimeConfig({
@@ -99,6 +108,16 @@ export default function App() {
     }
   }
 
+  const networkConnected = status?.chainMatches === true;
+  const canAdvanceFromStep1 = networkConnected;
+  const canAdvanceFromStep2 = paymentDraft !== null;
+  const currentStepLabel =
+    STEPS.find(({ step }) => step === currentStep)?.label ?? "";
+
+  function goToStep(step: StepNumber) {
+    setCurrentStep(step);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -110,31 +129,8 @@ export default function App() {
           correlation → Envio verification → Chainlink CRE evidence.
         </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Network</Text>
-          {!status && !statusError ? <ActivityIndicator /> : null}
-          {statusError ? <Text style={styles.error}>{statusError}</Text> : null}
-          {status ? (
-            <>
-              <Row label="Configured chain" value={String(status.configuredChainId)} />
-              <Row label="Live chain" value={String(status.liveChainId)} />
-              <Row
-                label="Network check"
-                value={status.chainMatches ? "Connected" : "Chain mismatch"}
-              />
-              <Row label="Block" value={status.blockNumber.toString()} />
-              <Row label="Asset" value={status.ausdSymbol} />
-              <Row label="Decimals" value={String(status.ausdDecimals)} />
-              <Text style={styles.label}>AUSD contract</Text>
-              <Text selectable style={styles.mono}>
-                {status.ausdAddress}
-              </Text>
-            </>
-          ) : null}
-        </View>
-
         <JudgeReadinessCard
-          networkConnected={status?.chainMatches === true}
+          networkConnected={networkConnected}
           paymentDraftSelected={paymentDraft !== null}
           meraAccountReady={meraIdentity !== null}
           registryConfigured={client.config.settlementRegistryAddress !== null}
@@ -148,48 +144,134 @@ export default function App() {
           envioIndexed={envioIndexedCurrentPayment}
         />
 
-        <CherryMoneyDraftCard
-          defaultBaseUrl={
-            process.env.EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL ??
-            "https://cherrymoney.co.uk"
-          }
-          selectedDraftId={paymentDraft?.id ?? null}
-          onSelectDraft={(draft) => {
-            setPaymentDraft(draft);
-            setLastTransfer(null);
-            setEnvioIndexedCurrentPayment(false);
-          }}
-        />
+        <View style={styles.stepper}>
+          {STEPS.map(({ step, label }, index) => (
+            <View key={step} style={styles.stepperItem}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={step > currentStep}
+                onPress={() => goToStep(step)}
+                style={[
+                  styles.stepperDot,
+                  step === currentStep && styles.stepperDotActive,
+                  step < currentStep && styles.stepperDotDone,
+                ]}
+              >
+                <Text
+                  style={
+                    step <= currentStep
+                      ? styles.stepperDotTextActive
+                      : styles.stepperDotText
+                  }
+                >
+                  {step < currentStep ? "✓" : step}
+                </Text>
+              </Pressable>
+              <Text
+                style={
+                  step === currentStep
+                    ? styles.stepperLabelActive
+                    : styles.stepperLabel
+                }
+              >
+                {label}
+              </Text>
+              {index < STEPS.length - 1 ? (
+                <View style={styles.stepperConnector} />
+              ) : null}
+            </View>
+          ))}
+        </View>
 
-        <MeraSessionCard
-          runtimeConfig={client.config}
-          journeyStartedAtMs={journeyStartedAtMs}
-          paymentDraft={paymentDraft}
-          onIdentity={(identity) => {
-            setMeraIdentity(identity);
-            setAddress(identity.address);
-            setBalance(null);
-            setBalanceError(null);
-          }}
-          onTransferSettled={(result) => {
-            setLastTransfer(result);
-            setEnvioIndexedCurrentPayment(false);
-          }}
-        />
+        <Text style={styles.stepHeading}>
+          Step {currentStep} of {STEPS.length} · {currentStepLabel}
+        </Text>
 
-        <MeraBusinessVaultCard
-          accountCredentialId={meraIdentity?.credentialId ?? null}
-        />
+        <View style={currentStep === 1 ? styles.stepShown : styles.stepHidden}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Network</Text>
+            {!status && !statusError ? <ActivityIndicator /> : null}
+            {statusError ? (
+              <Text style={styles.error}>{statusError}</Text>
+            ) : null}
+            {status ? (
+              <>
+                <Row label="Configured chain" value={String(status.configuredChainId)} />
+                <Row label="Live chain" value={String(status.liveChainId)} />
+                <Row
+                  label="Network check"
+                  value={status.chainMatches ? "Connected" : "Chain mismatch"}
+                />
+                <Row label="Block" value={status.blockNumber.toString()} />
+                <Row label="Asset" value={status.ausdSymbol} />
+                <Row label="Decimals" value={String(status.ausdDecimals)} />
+                <Text style={styles.label}>AUSD contract</Text>
+                <Text selectable style={styles.mono}>
+                  {status.ausdAddress}
+                </Text>
+              </>
+            ) : null}
+          </View>
 
-        <SettlementAnalyticsCard
-          endpoint={process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL}
-          explorerUrl={client.config.explorerUrl}
-          assetDecimals={client.config.ausdDecimals}
-          focusPaymentTxHash={lastTransfer?.hash ?? null}
-          onFocusIndexed={setEnvioIndexedCurrentPayment}
-        />
+          <StepNav
+            onNext={() => goToStep(2)}
+            nextDisabled={!canAdvanceFromStep1}
+            nextLabel="Continue to Cherry Money"
+          />
+        </View>
 
-        <View style={styles.card}>
+        <View style={currentStep === 2 ? styles.stepShown : styles.stepHidden}>
+          <CherryMoneyDraftCard
+            defaultBaseUrl={
+              process.env.EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL ??
+              "https://cherrymoney.co.uk"
+            }
+            selectedDraftId={paymentDraft?.id ?? null}
+            onSelectDraft={(draft) => {
+              setPaymentDraft(draft);
+              setLastTransfer(null);
+              setEnvioIndexedCurrentPayment(false);
+            }}
+          />
+
+          <StepNav
+            onBack={() => goToStep(1)}
+            onNext={() => goToStep(3)}
+            nextDisabled={!canAdvanceFromStep2}
+            nextLabel="Continue to Mera payment"
+          />
+        </View>
+
+        <View style={currentStep === 3 ? styles.stepShown : styles.stepHidden}>
+          <MeraSessionCard
+            runtimeConfig={client.config}
+            journeyStartedAtMs={journeyStartedAtMs}
+            paymentDraft={paymentDraft}
+            onIdentity={(identity) => {
+              setMeraIdentity(identity);
+              setAddress(identity.address);
+              setBalance(null);
+              setBalanceError(null);
+            }}
+            onTransferSettled={(result) => {
+              setLastTransfer(result);
+              setEnvioIndexedCurrentPayment(false);
+            }}
+          />
+
+          <MeraBusinessVaultCard
+            accountCredentialId={meraIdentity?.credentialId ?? null}
+          />
+
+          <SettlementAnalyticsCard
+            endpoint={process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL}
+            explorerUrl={client.config.explorerUrl}
+            assetDecimals={client.config.ausdDecimals}
+            focusPaymentTxHash={lastTransfer?.hash ?? null}
+            onFocusIndexed={setEnvioIndexedCurrentPayment}
+          />
+
+          <View style={styles.card}>
           <Text style={styles.cardTitle}>Read an AUSD balance</Text>
           <Text style={styles.helper}>
             Create or recover a Mera account above to prefill its Monad
@@ -232,6 +314,9 @@ export default function App() {
               </Text>
             </View>
           ) : null}
+          </View>
+
+          <StepNav onBack={() => goToStep(2)} />
         </View>
 
         <Text style={styles.footer}>
@@ -248,6 +333,52 @@ function Row({ label, value }: { label: string; value: string }) {
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.value}>{value}</Text>
+    </View>
+  );
+}
+
+function StepNav({
+  onBack,
+  onNext,
+  nextDisabled = false,
+  nextLabel = "Continue",
+}: {
+  onBack?: () => void;
+  onNext?: () => void;
+  nextDisabled?: boolean;
+  nextLabel?: string;
+}) {
+  return (
+    <View style={styles.navRow}>
+      {onBack ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onBack}
+          style={({ pressed }) => [
+            styles.navBack,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.navBackText}>Back</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.navSpacer} />
+      )}
+      {onNext ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={nextDisabled}
+          onPress={onNext}
+          style={({ pressed }) => [
+            styles.button,
+            styles.navNext,
+            nextDisabled && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.buttonText}>{nextLabel}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -304,6 +435,87 @@ const styles = StyleSheet.create({
     fontFamily: "monospace",
     fontSize: 12,
     lineHeight: 18,
+  },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stepperItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stepperDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperDotActive: {
+    backgroundColor: "#111827",
+  },
+  stepperDotDone: {
+    backgroundColor: "#166534",
+  },
+  stepperDotText: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  stepperDotTextActive: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  stepperLabel: {
+    marginLeft: 6,
+    fontSize: 11,
+    color: "#94a3b8",
+  },
+  stepperLabelActive: {
+    marginLeft: 6,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  stepperConnector: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e2e8f0",
+    marginHorizontal: 8,
+  },
+  stepHeading: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  stepShown: {
+    gap: 18,
+  },
+  stepHidden: {
+    display: "none",
+  },
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  navSpacer: {
+    flex: 1,
+  },
+  navBack: {
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  navBackText: {
+    color: "#475569",
+    fontWeight: "700",
+  },
+  navNext: {
+    flex: 1,
   },
   input: {
     borderWidth: 1,

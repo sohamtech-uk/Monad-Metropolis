@@ -11,6 +11,7 @@ const config: ExpoConfig = {
   version: "0.2.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
+  icon: "./assets/icon.png",
   plugins: [
     [
       "./plugins/with-credential-manager-domain.cjs",
@@ -26,6 +27,10 @@ const config: ExpoConfig = {
   android: {
     package: applicationId,
     versionCode: 1,
+    adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon-foreground.png",
+      backgroundColor: "#FFFFFF",
+    },
   },
   extra: {
     meraRpId: rpId,

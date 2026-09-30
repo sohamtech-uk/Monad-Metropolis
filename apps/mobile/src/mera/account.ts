@@ -165,7 +165,8 @@ function describePasskeyError(cause: unknown): string {
   switch (error) {
     case "RequestFailed":
       return "The device refused the passkey request for " + rpId +
-        ". Verify the Apple/Android association files for this app and relying-party domain.";
+        ". Verify the Apple/Android association files for this app and relying-party domain." +
+        (typeof message === "string" && message ? " Native detail: " + message : "");
     case "NoCredentials":
       return "No synced passkey for " + rpId + " is available on this device.";
     default:

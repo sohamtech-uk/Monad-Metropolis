@@ -11,10 +11,25 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "credentialsSource": "local"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      },
+      "ios": {
+        "ascApiKeyPath": "./AuthKey_V4N2ZQS5DX.p8",
+        "ascApiKeyId": "V4N2ZQS5DX",
+        "ascApiKeyIssuerId": "9ec643a6-94c4-4a72-ac2e-6c6927ca3d01",
+        "appleTeamId": "DK4T8B9KX7",
+        "ascAppId": "6817543607"
+      }
+    }
   }
 }

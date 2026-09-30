@@ -10,3 +10,13 @@ coverage/
 *.log
 apps/mobile/ios/
 apps/mobile/android/
+apps/mobile/google-play-service-account.json
+apps/mobile/AuthKey_*.p8
+apps/mobile/credentials.json
+apps/mobile/*.p12
+apps/mobile/*.cer
+apps/mobile/*.pem
+apps/mobile/*.key
+apps/mobile/*.csr
+apps/mobile/*.mobileprovision
+apps/mobile/.p12_password.txt

@@ -11,6 +11,12 @@ const config: ExpoConfig = {
   version: "0.2.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
+  plugins: [
+    [
+      "./plugins/with-credential-manager-domain.cjs",
+      { rpId },
+    ],
+  ],
   ios: {
     bundleIdentifier: applicationId,
     buildNumber: "1",

@@ -57,7 +57,9 @@ Links declaration under `<application>`:
 The Expo config plugin at
 `apps/mobile/plugins/with-credential-manager-domain.cjs` generates that
 metadata and the corresponding `asset_statements` string resource from
-`MERA_RP_ID`.
+`MERA_RP_ID`. The JSON quotation marks in the Android string resource must be
+escaped (for example `[{\\\"include\\\":\\\"https://.../assetlinks.json\\\"}]`) so
+Credential Manager receives a valid Digital Asset Links statement list.
 
 For a local Android debug certificate:
 

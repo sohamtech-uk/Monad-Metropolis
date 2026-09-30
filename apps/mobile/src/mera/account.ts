@@ -163,9 +163,24 @@ function describePasskeyError(cause: unknown): string {
   const { error, message } = (cause ?? {}) as Partial<PasskeyError>;
 
   switch (error) {
+    case "BadConfiguration":
+      return "Passkey app/domain association is invalid for " + rpId +
+        ". Verify the installed app signing certificate, Digital Asset Links, and Android asset_statements metadata.";
     case "RequestFailed":
-      return "The device refused the passkey request for " + rpId +
-        ". Verify the Apple/Android association files for this app and relying-party domain.";
+      return "Android passkey request failed" +
+        (typeof message === "string" && message.trim() !== ""
+          ? ": " + message
+          : ". The platform returned a generic request failure; check Credential Manager / Google Password Manager and PRF support.");
+    case "NoCreateOption":
+      return "No Android credential provider can create this passkey. Check Google Password Manager / passkey provider availability and device screen lock.";
+    case "NotSupported":
+      return "Passkeys are not supported by this Android device or OS configuration.";
+    case "UserCancelled":
+      return "Passkey creation was cancelled.";
+    case "Interrupted":
+      return "Passkey creation was interrupted. Try again.";
+    case "TimedOut":
+      return "Passkey creation timed out. Try again.";
     case "NoCredentials":
       return "No synced passkey for " + rpId + " is available on this device.";
     default:

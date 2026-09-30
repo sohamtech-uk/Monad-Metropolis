@@ -45,6 +45,20 @@ with:
 - package name `uk.co.cherrymoney.metropolis`
 - the SHA-256 fingerprint(s) of every signing certificate used for the demo build.
 
+The Android build must also include Credential Manager's native Digital Asset
+Links declaration under `<application>`:
+
+```xml
+<meta-data
+    android:name="asset_statements"
+    android:resource="@string/asset_statements" />
+```
+
+The Expo config plugin at
+`apps/mobile/plugins/with-credential-manager-domain.cjs` generates that
+metadata and the corresponding `asset_statements` string resource from
+`MERA_RP_ID`.
+
 For a local Android debug certificate:
 
 ```bash

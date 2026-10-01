@@ -8,7 +8,9 @@
     "prebuild": "expo prebuild --clean",
     "ios": "expo run:ios --device",
     "android": "expo run:android --device",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "web": "expo start --web",
+    "web:build": "expo export --platform web"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
@@ -27,7 +29,10 @@
     "@cherry-metropolis/envio-client": "0.1.0",
     "@noble/ciphers": "2.4.0",
     "@noble/hashes": "2.3.0",
-    "@scure/base": "2.3.0"
+    "@scure/base": "2.3.0",
+    "react-dom": "19.2.8",
+    "react-native-web": "~0.21.0",
+    "@expo/metro-runtime": "~57.0.10"
   },
   "devDependencies": {
     "@types/react": "~19.2.18",

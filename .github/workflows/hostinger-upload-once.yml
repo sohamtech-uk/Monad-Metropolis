@@ -35,6 +35,12 @@ jobs:
           test -f "${RUNNER_TEMP}/web/index.html"
           test -f "${RUNNER_TEMP}/web/.well-known/assetlinks.json"
 
+      - name: Inspect public server certificate and hostname without credentials
+        shell: bash
+        run: |
+          getent hosts 77.37.37.212 || true
+          timeout 20 openssl s_client -starttls ftp -connect 77.37.37.212:21 -showcerts </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -ext subjectAltName
+
       - name: Check the uploader syntax
         run: python3 -m py_compile scripts/deploy-hostinger-once.py
 

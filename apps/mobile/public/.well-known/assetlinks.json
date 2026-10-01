@@ -1,0 +1,16 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "uk.co.cherrymoney.metropolis",
+      "sha256_cert_fingerprints": [
+        "F1:B8:40:D8:75:47:89:38:9B:D7:8E:AD:D4:4A:DB:66:2F:C2:91:26:FE:92:1D:39:8B:EA:3B:76:F9:CB:2B:61",
+        "09:C1:84:8C:62:25:BE:9A:01:AB:10:9C:10:FE:E5:F3:4B:59:5F:C8:89:28:28:0A:76:1A:BC:7A:50:AC:87:43"
+      ]
+    }
+  }
+]

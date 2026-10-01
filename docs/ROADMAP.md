@@ -12,7 +12,7 @@
 | 3 Oct | Cherry Money invoice integration | Real Cherry Money payment draft maps to Monad payment context |
 | 4 Oct | Settlement event/contract | Privacy-safe business settlement event emitted on Monad |
 | 5 Oct | Chainlink CRE | Successful CRE simulation orchestrates Monad + Cherry Money API |
-| 6 Oct | Reconciliation | Verified settlement marks the correct Cherry Money invoice paid |
+| 6 Oct | Reconciliation evidence | CRE produces deterministic reconciliation evidence for the correct Cherry Money payment draft |
 | 7 Oct | Envio HyperIndex | Live Monad settlement data is indexed and queryable |
 | 8 Oct | Settlement analytics | Envio data powers transaction history and analytics |
 | 9 Oct | Mera PRF non-wallet feature | Same passkey reproduces a namespaced encryption key cross-device |
@@ -35,7 +35,7 @@
 ### P1
 - Cherry Money invoice/payment-draft integration
 - CRE orchestration
-- automatic accounting reconciliation
+- deterministic reconciliation evidence bound to the source Cherry Money payment draft
 
 ### P2
 - Envio indexing and analytics
@@ -47,6 +47,36 @@
 - additional AI features
 
 Do not sacrifice a stable P0/P1 demo to add optional sponsor functionality.
+
+## Hackathon accounting boundary
+
+The Metropolis qualifying path ends at independently verified reconciliation evidence:
+
+```text
+AUSD settlement on Monad
+   ↓
+Envio + registry verification
+   ↓
+Chainlink CRE
+   ↓
+deterministic reconciliation evidence
+   ↓
+Judge Mode proof
+```
+
+The hackathon client does **not** mark a production Cherry Money invoice paid or post to
+the accounting ledger. Cherry Money does not yet expose a dedicated blockchain-settlement
+callback, and reusing an unrelated reconciliation endpoint would weaken the safety boundary.
+
+The production follow-on is explicit and separate:
+
+```text
+verified CRE reconciliation evidence
+   ↓
+reviewed + authenticated + idempotent settlement callback
+   ↓
+Cherry Money invoice / ledger / reconciliation update
+```
 
 ## Rail strategy
 

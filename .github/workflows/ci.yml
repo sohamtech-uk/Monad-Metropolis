@@ -34,8 +34,11 @@ jobs:
         run: npm run check
       - name: Build Expo web app
         run: npm run web:build
-      - name: Consumer browser smoke test (no payments)
-        run: node scripts/consumer-browser-smoke.mjs
+      - name: Consumer browser smoke test (offline, no payments)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cherry-browser-venv"
+          "$RUNNER_TEMP/cherry-browser-venv/bin/pip" install playwright==1.57.0
+          "$RUNNER_TEMP/cherry-browser-venv/bin/python" scripts/consumer_browser_smoke.py
       - name: Upload web build
         uses: actions/upload-artifact@v4
         with:

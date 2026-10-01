@@ -17,7 +17,9 @@
     "mobile": "npm run start -w @cherry-metropolis/mobile",
     "mobile:ios": "npm run ios -w @cherry-metropolis/mobile",
     "mobile:android": "npm run android -w @cherry-metropolis/mobile",
-    "contracts:check": "rm -rf /tmp/cherry-metropolis-contracts && mkdir -p /tmp/cherry-metropolis-contracts && solcjs --bin --abi contracts/src/CherrySettlementRegistry.sol -o /tmp/cherry-metropolis-contracts"
+    "contracts:check": "rm -rf /tmp/cherry-metropolis-contracts && mkdir -p /tmp/cherry-metropolis-contracts && solcjs --bin --abi contracts/src/CherrySettlementRegistry.sol -o /tmp/cherry-metropolis-contracts",
+    "web": "npm run web -w @cherry-metropolis/mobile",
+    "web:build": "npm run web:build -w @cherry-metropolis/mobile"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

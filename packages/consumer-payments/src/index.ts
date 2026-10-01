@@ -9,22 +9,22 @@ export const TEST_AUSD = getAddress('0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC'
 export const COMMON_ABI = parseAbi([
   'function asset() view returns (address)',
   'function CONTRACT_KIND() view returns (bytes32)',
-  'function recordId(address sender, bytes32 reference) view returns (bytes32)',
+  'function recordId(address sender, bytes32 referenceId) view returns (bytes32)',
 ]);
 export const GIFT_ABI = parseAbi([
-  'function createGift(address recipient,uint128 amount,uint64 unlockAt,uint64 expiresAt,bytes32 reference) returns (bytes32)',
+  'function createGift(address recipient,uint128 amount,uint64 unlockAt,uint64 expiresAt,bytes32 referenceId) returns (bytes32)',
   'function gifts(bytes32 id) view returns (address sender,address recipient,uint128 amount,uint64 unlockAt,uint64 expiresAt,uint8 state)',
   'function claim(bytes32 id)', 'function reclaim(bytes32 id)',
 ]);
 export const STREAM_ABI = parseAbi([
-  'function createStream(address recipient,uint128 total,uint64 startAt,uint64 duration,bool cancellable,bytes32 reference) returns (bytes32)',
+  'function createStream(address recipient,uint128 total,uint64 startAt,uint64 duration,bool cancellable,bytes32 referenceId) returns (bytes32)',
   'function streams(bytes32 id) view returns (address sender,address recipient,uint128 total,uint128 withdrawn,uint64 startAt,uint64 endAt,bool cancellable,bool cancelled,uint128 vestedOnCancel)',
   'function withdrawable(bytes32 id) view returns (uint128)',
   'function withdraw(bytes32 id)', 'function cancel(bytes32 id)',
 ]);
 export const REWARD_ABI = parseAbi([
   'function campaigns(bytes32 id) view returns (address merchant,address verifier,uint128 remaining,uint128 minimum,uint128 cap,uint16 bps,uint32 maxClaimsPerPayer,uint64 startsAt,uint64 endsAt,uint64 claimUntil)',
-  'function createCampaign(address verifier,uint128 budget,uint128 minimum,uint128 cap,uint16 bps,uint32 maxClaimsPerPayer,uint64 startsAt,uint64 endsAt,uint64 claimUntil,bytes32 reference) returns (bytes32)',
+  'function createCampaign(address verifier,uint128 budget,uint128 minimum,uint128 cap,uint16 bps,uint32 maxClaimsPerPayer,uint64 startsAt,uint64 endsAt,uint64 claimUntil,bytes32 referenceId) returns (bytes32)',
   'function claim((bytes32 campaignId,bytes32 paymentTxHash,uint32 logIndex,address payer,uint128 purchaseAmount,uint64 paidAt,uint64 validUntil) v,bytes signature)',
   'function closeCampaign(bytes32 id)',
 ]);

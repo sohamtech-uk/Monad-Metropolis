@@ -33,3 +33,4 @@ jobs:
           name: metropolis-web
           path: apps/mobile/dist
           if-no-files-found: error
+          include-hidden-files: true

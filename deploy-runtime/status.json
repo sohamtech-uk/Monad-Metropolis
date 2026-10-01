@@ -1,23 +1,27 @@
 {
-  "stage": "uploading",
+  "stage": "deployed",
   "run_id": "36844722328",
   "branch": "ops/hostinger-upload-20261001",
   "site": "https://metropolis.cherrymoney.co.uk",
-  "time_utc": "2026-10-01T09:46:05Z",
-  "tls_hostname": "hstgr.io",
-  "source_run_id": 36842563695,
-  "source_commit": "231124115ed632fb65b3a10000e2b403f738ea07",
-  "files": [
+  "time_utc": "2026-10-01T09:46:29Z",
+  "checks": {
+    "root_http_200": true,
+    "root_matches_tested_build": true,
+    "all_static_assets_match": true,
+    "passkey_files_unchanged": true,
+    "graphql": true,
+    "htaccess_and_graphql_untouched": true
+  },
+  "uploaded_files": [
     "_expo/static/js/web/index-c23e427885f578353cfe8b9134bdcd86.js",
     "_expo/static/js/web/native-78abf996e7015f4a718175354030b5e7.js",
     "favicon.ico",
     "metadata.json",
     "index.html"
   ],
-  "graphql_before": true,
-  "preserved": [
-    ".htaccess",
-    "graphql/",
-    ".well-known/"
-  ]
+  "source_run_id": 36842563695,
+  "source_commit": "231124115ed632fb65b3a10000e2b403f738ea07",
+  "backup_path": "/.cherry-deployment-backups/36844722328",
+  "placeholder_moved": false,
+  "note": "No payments executed. Interactive passkey/payment testing remains a user action."
 }

@@ -1,0 +1,6 @@
+{
+  "framework": null,
+  "installCommand": "npm install --workspaces --include-workspace-root",
+  "buildCommand": "npm run web:build",
+  "outputDirectory": "apps/mobile/dist"
+}

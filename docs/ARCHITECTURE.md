@@ -73,10 +73,16 @@ It establishes:
 5. a typed Cherry Money API adapter;
 6. environment and security boundaries for the later Mera phase.
 
-## Later components
+## Hackathon end-to-end boundary
+
+The current Metropolis implementation deliberately stops at independently verified
+reconciliation evidence:
 
 ```text
-Mera
+Cherry Money payment draft
+  │
+  ▼
+Mera passkey + scoped session
   │
   ▼
 AUSD payment on Monad
@@ -84,14 +90,39 @@ AUSD payment on Monad
   ├──────────────► Envio HyperIndex ──► settlement analytics
   │
   ▼
+CherrySettlementRegistry
+  │
+  ▼
 Chainlink CRE
   │
   ▼
-Cherry Money settlement endpoint
+deterministic reconciliation evidence
   │
   ▼
-invoice + ledger + reconciliation
+Judge Mode proof
 ```
+
+CRE cross-checks the on-chain registry, Envio's indexed settlement and the source Cherry
+Money business draft. The hackathon client does **not** mark a production invoice paid or
+post accounting entries. That is intentional: the current Cherry Money integration surface
+does not expose a dedicated blockchain-settlement callback.
+
+## Production follow-on
+
+A production release can consume the verified evidence through a reviewed boundary:
+
+```text
+verified CRE reconciliation evidence
+  │
+  ▼
+authenticated + idempotent settlement callback
+  │
+  ▼
+Cherry Money invoice / ledger / reconciliation
+```
+
+That callback must be designed and reviewed as an accounting mutation surface rather than
+reusing an unrelated bank-reconciliation endpoint.
 
 Stellar remains a separate Cherry Pay rail in the production product architecture.
 It is not replaced by Monad and is not inserted into the Agora qualifying transaction.

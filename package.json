@@ -3,15 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "Cherry Pay Global — Monad Metropolis hackathon workspace",
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "envio",
-    "cre/*"
-  ],
-  "engines": {
-    "node": ">=24"
-  },
+  "workspaces": ["apps/*", "packages/*", "envio", "cre/*"],
+  "engines": { "node": ">=24" },
   "scripts": {
     "check": "npm run typecheck --workspaces --if-present && npm run contracts:check",
     "mobile": "npm run start -w @cherry-metropolis/mobile",
@@ -19,11 +12,12 @@
     "mobile:android": "npm run android -w @cherry-metropolis/mobile",
     "contracts:check": "rm -rf /tmp/cherry-metropolis-contracts && mkdir -p /tmp/cherry-metropolis-contracts && solcjs --bin --abi contracts/src/CherrySettlementRegistry.sol -o /tmp/cherry-metropolis-contracts",
     "web": "npm run web -w @cherry-metropolis/mobile",
-    "web:build": "npm run web:build -w @cherry-metropolis/mobile"
+    "web:build": "npm run web:build -w @cherry-metropolis/mobile",
+    "consumer:build": "node scripts/build-consumer-contracts.mjs",
+    "consumer:test": "npm run consumer:build && node --experimental-strip-types --test tests/consumer-*.test.mjs"
   },
   "devDependencies": {
-    "@types/node": "24.13.3",
-    "typescript": "~6.0.3",
-    "solc": "0.8.30"
+    "@types/node": "24.13.3", "typescript": "~6.0.3", "solc": "0.8.30",
+    "@openzeppelin/contracts": "5.4.0", "ganache": "7.9.2"
   }
 }

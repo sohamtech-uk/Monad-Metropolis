@@ -23,3 +23,6 @@ jobs:
 
       - name: Typecheck
         run: npm run check
+
+      - name: Build Expo web app
+        run: npm run web:build

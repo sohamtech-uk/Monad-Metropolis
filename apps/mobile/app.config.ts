@@ -12,6 +12,12 @@ const config: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/icon.png",
+  web: {
+    output: "single",
+    name: "Cherry Pay Global — Monad Metropolis",
+    shortName: "Cherry Pay",
+    favicon: "./assets/icon.png",
+  },
   plugins: [
     [
       "./plugins/with-credential-manager-domain.cjs",

@@ -11,10 +11,12 @@ const U = 1000000n;
 const ref = value => keccak256(toBytes(value));
 const chain = defineChain({ id:31337, name:'Local test', nativeCurrency:{name:'ETH',symbol:'ETH',decimals:18},rpcUrls:{default:{http:['http://127.0.0.1']}} });
 let provider, client, accounts, wallets, token, gift, stream, rewards, t0;
+// The local chain mines synchronously; do not use production 4-second polling.
+const receiptFor = hash => client.waitForTransactionReceipt({hash,pollingInterval:20,timeout:10000});
 const send = async (who, address, name, functionName, args=[]) => {
  const sim = await client.simulateContract({account:accounts[who],address,abi:artifacts[name].abi,functionName,args});
  const hash = await wallets[who].writeContract(sim.request);
- const receipt = await client.waitForTransactionReceipt({hash});
+ const receipt = await receiptFor(hash);
  assert.equal(receipt.status,'success'); return receipt;
 };
 const read = (address,name,functionName,args=[]) => client.readContract({address,abi:artifacts[name].abi,functionName,args});
@@ -22,12 +24,12 @@ const balance = address => read(token,'ConsumerTestToken','balanceOf',[address])
 const warp = async t => { await provider.request({method:'evm_setTime',params:[Number(t * 1000n)]}); await provider.request({method:'evm_mine',params:[]}); };
 const deploy = async(name,args=[]) => {
  const hash = await wallets[0].deployContract({abi:artifacts[name].abi,bytecode:`0x${artifacts[name].evm.bytecode.object}`,args});
- return (await client.waitForTransactionReceipt({hash})).contractAddress;
+ return (await receiptFor(hash)).contractAddress;
 };
 beforeEach(async () => {
  provider = ganache.provider({logging:{quiet:true},chain:{chainId:31337,hardfork:'shanghai'},miner:{timestampIncrement:0},wallet:{deterministic:true,totalAccounts:5}});
  accounts = Object.values(provider.getInitialAccounts()).map(a => privateKeyToAccount(a.secretKey));
- client = createPublicClient({chain,transport:custom(provider),cacheTime:0});
+ client = createPublicClient({chain,transport:custom(provider),cacheTime:0,pollingInterval:20});
  wallets = accounts.map(account => createWalletClient({chain,account,transport:custom(provider)}));
  token = await deploy('ConsumerTestToken'); gift = await deploy('CherryGiftEscrow',[token]);
  stream = await deploy('CherryEarningsStream',[token]); rewards = await deploy('CherryRewardCampaigns',[token]);

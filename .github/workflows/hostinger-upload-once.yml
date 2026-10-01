@@ -19,19 +19,22 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: '36845335777'
+      SOURCE_COMMIT: '11f238d65b7128b13ca4095068ff013589e4041e'
     steps:
       - name: Check out deployment tooling
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Validate the tested source build
+      - name: Validate the tested and merged source build
         shell: bash
         run: |
           set -euo pipefail
-          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/36842563695" > "${RUNNER_TEMP}/source-run.json"
-          jq -e '.status == "completed" and .conclusion == "success" and .head_branch == "main" and .head_sha == "231124115ed632fb65b3a10000e2b403f738ea07"' "${RUNNER_TEMP}/source-run.json" >/dev/null
-          gh run download 36842563695 --repo "${GITHUB_REPOSITORY}" --name metropolis-web --dir "${RUNNER_TEMP}/web"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" > "${RUNNER_TEMP}/source-run.json"
+          jq -e --arg sha "$SOURCE_COMMIT" '.status == "completed" and .conclusion == "success" and .head_branch == "fix/browser-fetch-hostinger" and .head_sha == $sha' "${RUNNER_TEMP}/source-run.json" >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/38" | jq -e --arg sha "$SOURCE_COMMIT" '.merged == true and .head.sha == $sha' >/dev/null
+          gh run download "$SOURCE_RUN_ID" --repo "${GITHUB_REPOSITORY}" --name metropolis-web --dir "${RUNNER_TEMP}/web"
           test -f "${RUNNER_TEMP}/web/index.html"
           test -f "${RUNNER_TEMP}/web/.well-known/assetlinks.json"
 

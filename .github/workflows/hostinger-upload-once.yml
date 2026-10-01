@@ -1,0 +1,44 @@
+name: Hostinger one-time web upload
+
+on:
+  push:
+    branches: [ops/hostinger-upload-20261001]
+    paths: [.github/workflows/hostinger-upload-once.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: hostinger-metropolis-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: '36845540134'
+      SOURCE_COMMIT: 'cc3ab12de6dca0c419e764015032484664bc856c'
+    steps:
+      - name: Check out deployment tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate the successful main build
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" > "${RUNNER_TEMP}/source-run.json"
+          jq -e --arg sha "$SOURCE_COMMIT" '.status == "completed" and .conclusion == "success" and .head_branch == "main" and .head_sha == $sha' "${RUNNER_TEMP}/source-run.json" >/dev/null
+          gh run download "$SOURCE_RUN_ID" --repo "${GITHUB_REPOSITORY}" --name metropolis-web --dir "${RUNNER_TEMP}/web"
+          test -f "${RUNNER_TEMP}/web/index.html"
+          test -f "${RUNNER_TEMP}/web/.well-known/assetlinks.json"
+
+      - name: Check the uploader syntax
+        run: python3 -m py_compile scripts/deploy-hostinger-once.py scripts/run_hostinger_upload.py
+
+      - name: Upload over hostname-verified FTPS and check the live website
+        run: python3 scripts/run_hostinger_upload.py

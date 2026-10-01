@@ -1,0 +1,73 @@
+name: Hostinger browser smoke check
+
+on:
+  push:
+    branches: [ops/hostinger-upload-20261001]
+    paths: [.github/workflows/hostinger-browser-check.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Wait for the corrected tested build to finish deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 30); do
+            gh api 'repos/sohamtech-uk/Monad-Metropolis/contents/deploy-runtime/status.json?ref=ops%2Fhostinger-upload-20261001' --jq .content | base64 -d > "${RUNNER_TEMP}/deployment-status.json"
+            if jq -e '.stage == "deployed" and .source_commit == "cc3ab12de6dca0c419e764015032484664bc856c"' "${RUNNER_TEMP}/deployment-status.json" >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 4
+          done
+          test "$ready" = true
+
+      - name: Check the live app without signing in or making payments
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/hostinger-browser"
+          browser="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          timeout 60 "$browser" --headless --no-sandbox --disable-gpu --no-first-run --virtual-time-budget=15000 --window-size=1440,1100 --screenshot="${RUNNER_TEMP}/hostinger-browser/website.png" --dump-dom 'https://metropolis.cherrymoney.co.uk/' > "${RUNNER_TEMP}/hostinger-browser/dom.html" 2> "${RUNNER_TEMP}/hostinger-browser/browser.log"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from html.parser import HTMLParser
+          class Text(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.parts=[]
+              def handle_data(self, data):
+                  self.parts.append(data)
+          root=Path(os.environ['RUNNER_TEMP'])/'hostinger-browser'
+          html=(root/'dom.html').read_text()
+          parser=Text(); parser.feed(html)
+          text='\n'.join(s.strip() for s in parser.parts if s.strip())
+          (root/'rendered-text.txt').write_text(text)
+          assert 'Passkey-powered business payments' in text, 'App heading did not render'
+          assert 'CHERRY PAY GLOBAL' in text, 'Cherry Pay app did not render'
+          assert 'Hostinger' not in text, 'Unexpected Hostinger placeholder'
+          assert 'Illegal invocation' not in text, 'Browser API receiver error remains'
+          assert 'Failed to fetch' not in text, 'A browser network request failed'
+          assert 'Envio GraphQL request failed' not in text, 'Envio request failed'
+          assert 'Connected' in text, 'Monad connection was not established'
+          print('LIVE_BROWSER_RENDER: PASS')
+          print('BROWSER_API_COMPATIBILITY: PASS')
+          print('No credentials entered, passkeys created, or payments submitted.')
+          print(text[-10000:])
+          PY
+
+      - name: Save browser verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hostinger-browser-check
+          path: ${{ runner.temp }}/hostinger-browser
+          if-no-files-found: error

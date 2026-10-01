@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -16,6 +17,19 @@ import {
 type PendingAction = "load" | "create" | null;
 
 const PLACEHOLDER_COLOR = "#94a3b8";
+
+const WEB_DEMO_DRAFT: CherryMoneyPaymentDraft = Object.freeze({
+  id: "e37fd383-ed0e-4db3-975d-ea489115072b",
+  payee: "Berlin Design Demo GmbH",
+  amount: 5,
+  reference: "METROPOLIS-E2E-001",
+  purpose: "Monad AUSD end-to-end test",
+  currency: "USD",
+  status: "draft_only",
+  createdAt: null,
+  moneyMoved: false,
+  source: "cherry-money-production",
+});
 
 type CherryMoneyDraftCardProps = {
   defaultBaseUrl: string;
@@ -142,6 +156,39 @@ export function CherryMoneyDraftCard({
       <Text style={styles.body}>
         The Metropolis app reads the existing authenticated WebMCP bridge. The
         bearer token stays only in app memory and is never written to disk.
+      </Text>
+
+      {Platform.OS === "web" ? (
+        <View style={styles.demoPanel}>
+          <Text style={styles.demoEyebrow}>JUDGE / MENTOR DEMO</Text>
+          <Text style={styles.demoTitle}>Start with the verified hackathon draft.</Text>
+          <Text style={styles.muted}>
+            This selects the existing METROPOLIS-E2E-001 draft snapshot without
+            exposing a Cherry Money bearer token in the browser. CRE still
+            verifies the same reference against the live Cherry Money source.
+          </Text>
+          <ActionButton
+            disabled={selectedDraftId === WEB_DEMO_DRAFT.id}
+            label={
+              selectedDraftId === WEB_DEMO_DRAFT.id
+                ? "Demo draft selected ✓"
+                : "Use 5 USD → 5 AUSD demo draft"
+            }
+            onPress={() => {
+              setError(null);
+              onSelectDraft(WEB_DEMO_DRAFT);
+            }}
+            primary
+          />
+          <Text style={styles.demoNote}>
+            For a clean on-chain rerun, use a fresh Mera payer if this payment
+            reference was already correlated by the recovered account.
+          </Text>
+        </View>
+      ) : null}
+
+      <Text style={styles.sectionHeading}>
+        {Platform.OS === "web" ? "Live Cherry Money connection (optional)" : "Live Cherry Money connection"}
       </Text>
 
       <Text style={styles.label}>Cherry Money API</Text>
@@ -364,6 +411,35 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  sectionHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  demoPanel: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14,
+  },
+  demoEyebrow: {
+    color: "#166534",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  demoTitle: {
+    color: "#14532d",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  demoNote: {
+    color: "#166534",
+    fontSize: 11,
+    lineHeight: 17,
   },
   muted: {
     color: "#64748b",

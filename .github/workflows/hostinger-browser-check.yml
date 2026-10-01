@@ -11,8 +11,25 @@ permissions:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 5
     steps:
+      - name: Wait for the corrected tested build to finish deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 30); do
+            gh api 'repos/sohamtech-uk/Monad-Metropolis/contents/deploy-runtime/status.json?ref=ops%2Fhostinger-upload-20261001' --jq .content | base64 -d > "${RUNNER_TEMP}/deployment-status.json"
+            if jq -e '.stage == "deployed" and .source_commit == "cc3ab12de6dca0c419e764015032484664bc856c"' "${RUNNER_TEMP}/deployment-status.json" >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 4
+          done
+          test "$ready" = true
+
       - name: Check the live app without signing in or making payments
         shell: bash
         run: |
@@ -31,15 +48,20 @@ jobs:
                   self.parts.append(data)
           root=Path(os.environ['RUNNER_TEMP'])/'hostinger-browser'
           html=(root/'dom.html').read_text()
-          assert 'Passkey-powered business payments' in html, 'App heading did not render'
-          assert 'CHERRY PAY GLOBAL' in html, 'Cherry Pay app did not render'
-          assert 'Hostinger' not in html, 'Unexpected Hostinger placeholder'
           parser=Text(); parser.feed(html)
           text='\n'.join(s.strip() for s in parser.parts if s.strip())
           (root/'rendered-text.txt').write_text(text)
+          assert 'Passkey-powered business payments' in text, 'App heading did not render'
+          assert 'CHERRY PAY GLOBAL' in text, 'Cherry Pay app did not render'
+          assert 'Hostinger' not in text, 'Unexpected Hostinger placeholder'
+          assert 'Illegal invocation' not in text, 'Browser API receiver error remains'
+          assert 'Failed to fetch' not in text, 'A browser network request failed'
+          assert 'Envio GraphQL request failed' not in text, 'Envio request failed'
+          assert 'Connected' in text, 'Monad connection was not established'
           print('LIVE_BROWSER_RENDER: PASS')
+          print('BROWSER_API_COMPATIBILITY: PASS')
           print('No credentials entered, passkeys created, or payments submitted.')
-          print(text[-7000:])
+          print(text[-10000:])
           PY
 
       - name: Save browser verification evidence

@@ -13,14 +13,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Use Node 24
         uses: actions/setup-node@v4
         with:
           node-version: 24
 
-      - name: Install dependencies
-        run: npm install --workspaces --include-workspace-root
+      - name: Install locked dependencies
+        run: npm ci --workspaces --include-workspace-root
 
       - name: Browser API regression test
         run: node --test tests/browser-fetch.test.mjs
@@ -33,6 +35,9 @@ jobs:
 
       - name: Build Expo web app
         run: npm run web:build
+
+      - name: Consumer browser smoke test (no payments)
+        run: node scripts/consumer-browser-smoke.mjs
 
       - name: Upload web build
         uses: actions/upload-artifact@v4
@@ -48,3 +53,11 @@ jobs:
           name: consumer-contracts
           path: build/consumer
           if-no-files-found: error
+
+      - name: Save browser verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-browser-check
+          path: build/consumer-browser
+          if-no-files-found: ignore

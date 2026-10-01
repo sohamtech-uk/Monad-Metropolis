@@ -1,0 +1,19 @@
+Options -MultiViews
+RewriteEngine On
+
+# Preserve passkey association resources.
+<Files "apple-app-site-association">
+  ForceType application/json
+  Header set Content-Type "application/json"
+</Files>
+
+<Files "assetlinks.json">
+  ForceType application/json
+  Header set Content-Type "application/json"
+</Files>
+
+# Expo web is a single-page app. Serve real files/directories first,
+# then fall back to index.html.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

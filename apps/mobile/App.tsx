@@ -4,6 +4,7 @@ import type { MeraAccountIdentity } from "./src/mera/account";
 import type { AusdTransferResult } from "./src/mera/scopedSession";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -67,6 +68,9 @@ export default function App() {
     useState<AusdTransferResult | null>(null);
   const [envioIndexedCurrentPayment, setEnvioIndexedCurrentPayment] =
     useState(false);
+  const envioEndpoint =
+    process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL ??
+    "https://metropolis.cherrymoney.co.uk/graphql/";
 
   useEffect(() => {
     let mounted = true;
@@ -120,7 +124,12 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          Platform.OS === "web" && styles.containerWeb,
+        ]}
+      >
         <Text style={styles.eyebrow}>CHERRY PAY GLOBAL · METROPOLIS</Text>
         <Text style={styles.title}>Passkey-powered business payments</Text>
         <Text style={styles.subtitle}>
@@ -138,9 +147,7 @@ export default function App() {
           correlationConfirmed={
             lastTransfer?.correlation.status === "confirmed"
           }
-          envioConfigured={Boolean(
-            process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL?.trim(),
-          )}
+          envioConfigured={Boolean(envioEndpoint.trim())}
           envioIndexed={envioIndexedCurrentPayment}
         />
 
@@ -264,7 +271,7 @@ export default function App() {
           />
 
           <SettlementAnalyticsCard
-            endpoint={process.env.EXPO_PUBLIC_ENVIO_GRAPHQL_URL}
+            endpoint={envioEndpoint}
             explorerUrl={client.config.explorerUrl}
             assetDecimals={client.config.ausdDecimals}
             focusPaymentTxHash={lastTransfer?.hash ?? null}
@@ -391,6 +398,12 @@ const styles = StyleSheet.create({
   container: {
     padding: 24,
     gap: 18,
+  },
+  containerWeb: {
+    width: "100%",
+    maxWidth: 1180,
+    alignSelf: "center",
+    paddingVertical: 40,
   },
   eyebrow: {
     fontSize: 12,

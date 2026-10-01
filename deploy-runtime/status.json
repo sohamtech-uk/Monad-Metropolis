@@ -1,0 +1,9 @@
+{
+  "stage": "failed",
+  "run_id": "36844432838",
+  "branch": "ops/hostinger-upload-20261001",
+  "site": "https://metropolis.cherrymoney.co.uk",
+  "time_utc": "2026-10-01T09:42:23Z",
+  "error": "RuntimeError: Could not establish hostname-verified FTPS. No credentials were sent.",
+  "note": "Check workflow logs. Upload is rolled back when a post-upload check fails."
+}

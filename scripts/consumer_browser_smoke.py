@@ -45,6 +45,7 @@ with sync_playwright() as playwright:
         page.goto('https://cherry-ui.test/')
         expect(page.get_by_text('Pay with clarity.\nKeep the proof.', exact=True)).to_be_visible()
         expect(button('Pay a supplier')).to_be_visible()
+        expect(tab('Home')).to_have_attribute('aria-selected', 'true')
         expect(page.get_by_text('No confirmed supplier payment in this session yet.', exact=True)).to_be_visible()
         page.screenshot(path=str(out / 'home-desktop.png'))
         tab('Activity').click()
@@ -107,12 +108,14 @@ with sync_playwright() as playwright:
             page.set_viewport_size({'width': width, 'height': 844})
             tab('Home').click()
             expect(button('Pay a supplier')).to_be_visible()
+            expect(tab('Home')).to_have_attribute('aria-selected', 'true')
             assert page.evaluate('document.documentElement.scrollWidth') <= width + 1, 'Home overflows mobile viewport'
             for name in ['Home', 'Pay', 'Activity', 'More']:
                 box = tab(name).bounding_box()
                 assert box and box['height'] >= 44 and box['width'] >= 44, 'Navigation tap target too small'
             page.screenshot(path=str(out / ('home-mobile-' + str(width) + '.png')))
             tab('Pay').click()
+            expect(tab('Pay')).to_have_attribute('aria-selected', 'true')
             assert page.evaluate('document.documentElement.scrollWidth') <= width + 1, 'Pay screen horizontal overflow'
             page.screenshot(path=str(out / ('pay-mobile-' + str(width) + '.png')))
             button('Open supplier payment').click()
@@ -122,20 +125,25 @@ with sync_playwright() as playwright:
         button('How the payment is checked').click()
         expect(button('How the payment is checked')).to_have_attribute('aria-expanded', 'true')
         page.screenshot(path=str(out / 'help-mobile.png'))
-        # A synthetic failed callback exercises routing/fragment cleanup only, not Google authentication.
+        # A real OAuth return loads a new document. Merely changing a same-page
+        # fragment does not remount React, so leave the app before simulating it.
+        # This is only a synthetic error callback, not Google authentication.
+        page.goto('about:blank')
         page.goto('https://cherry-ui.test/#google-error=Offline%20callback%20test')
         expect(page.get_by_role('heading', name='Pay a supplier', exact=True)).to_be_visible()
         expect(page.get_by_text('Offline callback test', exact=True)).to_be_visible()
+        expect(tab('Pay')).to_have_attribute('aria-selected', 'true')
         assert page.evaluate('location.hash') == '', 'OAuth fragment was not removed on return'
+        page.screenshot(path=str(out / 'oauth-return-error-mobile.png'))
         assert not submitted, 'The UI attempted a signing/submission request during offline tests'
         assert not errors, errors
         (out / 'result.json').write_text(json.dumps({'passed': True, 'paymentsExecuted': 0,
             'mode': 'actual compiled Expo app with local assets and external traffic blocked',
             'checks': ['customer home', 'truthful session-only activity', 'mainnet consent boundary',
                 'network/draft/payment gates', 'Google sign-in primary', 'advanced credentials collapsed',
-                'demo fixture explicitly labelled', 'OAuth callback routing/fragment cleanup',
+                'demo fixture explicitly labelled', 'full OAuth return routing/fragment cleanup',
                 'HyperSync outage is not LIVE', 'mainnet wallet filter', 'existing labs remain gated',
-                '320/390px overflow', '44px navigation targets', 'expanded accessibility state',
+                '320/390px overflow', '44px navigation targets', 'selected/expanded accessibility states',
                 'no script exceptions', 'no transaction requests'],
             'externalRequestsBlocked': len(blocked)}, indent=2))
         print('CONSUMER_BROWSER_SMOKE: PASS — customer UI, no payments')

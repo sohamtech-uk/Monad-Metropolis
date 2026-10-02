@@ -13,13 +13,14 @@ contracts:
       - event: "BusinessPaymentCorrelated(bytes32 indexed paymentReference, bytes32 indexed paymentTxHash, address indexed payer, address recipient, address asset, uint256 amount, uint64 recordedAt)"
 
 chains:
-  - id: 10143 # Monad Testnet — first-class HyperSync network in Envio
-    # Start just before the funded deployer / registry deployment window.
-    # Monad Testnet is currently served via RPC in Envio Development, so avoiding
-    # a genesis scan keeps the free deployment practical while still covering
-    # every CherrySettlementRegistry event and demo AUSD transfer.
-    # Deployment refresh marker: 2026-09-30 (no runtime behaviour change).
+  - id: 10143 # Monad Testnet — HyperSync is the default primary source.
+    # Keep the established coverage boundary. Do not trigger an unnecessary
+    # genesis reindex just to demonstrate HyperSync. Envio Cloud manages access;
+    # local indexing needs ENVIO_API_TOKEN (never an EXPO_PUBLIC_* value).
     start_block: 66776000
+    rpc:
+      - url: https://testnet-rpc.monad.xyz
+        for: fallback
     contracts:
       - name: AUSD
         address: "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC"

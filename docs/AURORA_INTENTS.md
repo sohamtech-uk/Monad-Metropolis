@@ -55,6 +55,11 @@ Cherry uses the SDK's:
 
 Cherry does not implement its own solver, bridge or execution state machine.
 
+Before previewing a payment, the client asks Aurora for the live supported-token
+catalogue and refuses to continue unless both Base USDC input and Monad USDC
+output are currently advertised. This avoids presenting a stale hard-coded
+route if solver/liquidity support changes.
+
 ## API-key proxy
 
 Aurora execution-create requests use a priced API key. The key is never shipped

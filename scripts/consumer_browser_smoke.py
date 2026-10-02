@@ -39,6 +39,23 @@ with sync_playwright() as playwright:
         expect(button('Use existing passkey')).to_be_enabled()
         expect(button('Create passkey')).to_be_enabled()
         page.screenshot(path=str(out / 'aurora-enabled-desktop.png'))
+        button('Envio Live').click()
+        expect(page.get_by_text('Watch the payment, not just a spinner.', exact=True)).to_be_visible()
+        expect(button('Start HyperSync')).to_be_enabled()
+        page.screenshot(path=str(out / 'envio-paused-desktop.png'))
+        button('Start HyperSync').click()
+        expect(page.get_by_text('UNAVAILABLE', exact=True)).to_be_visible()
+        # Network is deliberately blocked; the app must not fabricate a LIVE status.
+        expect(page.get_by_text('LIVE · PROVISIONAL', exact=True)).to_have_count(0)
+        button('Pause HyperSync').click()
+        button('Base Mainnet · USDC').click()
+        button('Apply Envio filters').click()
+        expect(page.get_by_text('Enter a valid wallet; mainnet reads require a wallet filter.', exact=True)).to_be_visible()
+        button('Monad Testnet · AUSD').click()
+        page.set_viewport_size({'width': 390, 'height': 844})
+        assert page.evaluate('document.documentElement.scrollWidth') <= 391, 'Envio horizontal mobile overflow'
+        page.screenshot(path=str(out / 'envio-mobile.png'))
+        page.set_viewport_size({'width': 1440, 'height': 1100})
         button('Earnings · Rewards · Gifts').click()
         expect(page.get_by_text('Earn, give and get rewarded.', exact=True)).to_be_visible()
         expect(page.get_by_text(re.compile('On-chain actions are disabled'))).to_be_visible()
@@ -66,6 +83,8 @@ with sync_playwright() as playwright:
         assert not errors, errors
         result = {'passed': True, 'mode': 'offline compiled-bundle UI check', 'paymentsExecuted': 0,
                   'checks': ['supplier flow retained', 'Aurora pay-from-any-chain surface', 'Aurora enabled build surface',
+                             'Envio Live tab', 'HyperSync pause and unavailable states', 'no fabricated LIVE on provider error',
+                             'mainnet wallet filtering required', 'Envio mobile viewport',
                              'earnings/rewards/gifts tabs', 'default-off write controls',
                              'explicit simulated earnings preview', 'gift UTC timing inputs',
                              'unsigned CRE evidence warning', '390px mobile viewport', 'no uncaught JavaScript exceptions']}

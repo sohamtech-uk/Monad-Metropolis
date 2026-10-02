@@ -27,12 +27,13 @@ import { MeraBusinessVaultCard } from "./src/MeraBusinessVaultCard";
 import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
 import { JudgeReadinessCard } from "./src/JudgeReadinessCard";
 
-type StepNumber = 1 | 2 | 3;
+type StepNumber = 1 | 2 | 3 | 4;
 
 const STEPS: ReadonlyArray<{ step: StepNumber; label: string }> = [
   { step: 1, label: "Network" },
   { step: 2, label: "Cherry Money" },
   { step: 3, label: "Mera payment" },
+  { step: 4, label: "Final verification" },
 ];
 
 export default function App() {
@@ -115,6 +116,10 @@ export default function App() {
   const networkConnected = status?.chainMatches === true;
   const canAdvanceFromStep1 = networkConnected;
   const canAdvanceFromStep2 = paymentDraft !== null;
+  const canAdvanceFromStep3 =
+    lastTransfer !== null &&
+    lastTransfer.correlation.status === "confirmed" &&
+    envioIndexedCurrentPayment;
   const currentStepLabel =
     STEPS.find(({ step }) => step === currentStep)?.label ?? "";
 
@@ -137,20 +142,6 @@ export default function App() {
           context → Mera passkey → Agora AUSD on Monad → settlement
           correlation → Envio verification → Chainlink CRE evidence.
         </Text>
-
-        <JudgeReadinessCard
-          networkConnected={networkConnected}
-          paymentDraftSelected={paymentDraft !== null}
-          meraAccountReady={meraIdentity !== null}
-          registryConfigured={client.config.settlementRegistryAddress !== null}
-          lastPaymentTxHash={lastTransfer?.hash ?? null}
-          correlationConfirmed={
-            lastTransfer?.correlation.status === "confirmed"
-          }
-          envioConfigured={Boolean(envioEndpoint.trim())}
-          envioIndexed={envioIndexedCurrentPayment}
-        />
-
         <View style={styles.stepper}>
           {STEPS.map(({ step, label }, index) => (
             <View key={step} style={styles.stepperItem}>
@@ -323,7 +314,38 @@ export default function App() {
           ) : null}
           </View>
 
-          <StepNav onBack={() => goToStep(2)} />
+          {!canAdvanceFromStep3 ? (
+            <Text style={styles.helper}>
+              Complete the AUSD payment, settlement correlation and Envio
+              verification before continuing to the final Chainlink CRE step.
+            </Text>
+          ) : null}
+
+          <StepNav
+            onBack={() => goToStep(2)}
+            onNext={() => goToStep(4)}
+            nextDisabled={!canAdvanceFromStep3}
+            nextLabel="Continue to final verification"
+          />
+        </View>
+
+        <View style={currentStep === 4 ? styles.stepShown : styles.stepHidden}>
+          <JudgeReadinessCard
+            networkConnected={networkConnected}
+            paymentDraftSelected={paymentDraft !== null}
+            meraAccountReady={meraIdentity !== null}
+            registryConfigured={
+              client.config.settlementRegistryAddress !== null
+            }
+            lastPaymentTxHash={lastTransfer?.hash ?? null}
+            correlationConfirmed={
+              lastTransfer?.correlation.status === "confirmed"
+            }
+            envioConfigured={Boolean(envioEndpoint.trim())}
+            envioIndexed={envioIndexedCurrentPayment}
+          />
+
+          <StepNav onBack={() => goToStep(3)} />
         </View>
 
         <Text style={styles.footer}>

@@ -6,30 +6,39 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       - name: Use Node 24
         uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Install dependencies
-        run: npm install --workspaces --include-workspace-root
-
+      - name: Install locked dependencies
+        run: npm ci --workspaces --include-workspace-root
       - name: Browser API regression test
         run: node --test tests/browser-fetch.test.mjs
-
       - name: Typecheck
         run: npm run check
-
       - name: Build Expo web app
         run: npm run web:build
-
+      - name: Consumer browser smoke test (offline, no payments)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cherry-browser-venv"
+          "$RUNNER_TEMP/cherry-browser-venv/bin/pip" install playwright==1.57.0
+          "$RUNNER_TEMP/cherry-browser-venv/bin/python" scripts/consumer_browser_smoke.py
       - name: Upload web build
         uses: actions/upload-artifact@v4
         with:
@@ -37,3 +46,43 @@ jobs:
           path: apps/mobile/dist
           if-no-files-found: error
           include-hidden-files: true
+      - name: Save browser verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-browser-check
+          path: build/consumer-browser
+          if-no-files-found: ignore
+
+  consumer-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install locked dependencies
+        run: npm ci --workspaces --include-workspace-root
+      - name: Consumer contracts and policy tests (local chain only)
+        run: |
+          set -o pipefail
+          mkdir -p build
+          npm run consumer:test 2>&1 | tee build/consumer-tests.log
+      - name: Upload compiled consumer contracts (not deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-contracts
+          path: build/consumer
+          if-no-files-found: error
+      - name: Save test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-test-results
+          path: build/consumer-tests.log
+          if-no-files-found: ignore

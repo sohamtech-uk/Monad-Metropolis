@@ -20,3 +20,4 @@ apps/mobile/*.key
 apps/mobile/*.csr
 apps/mobile/*.mobileprovision
 apps/mobile/.p12_password.txt
+build/

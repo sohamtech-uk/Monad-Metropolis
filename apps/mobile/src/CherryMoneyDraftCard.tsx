@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -10,11 +10,13 @@ import {
 } from "react-native";
 import {
   CherryMoneyClient,
+  buildCherryMoneyGoogleLoginUrl,
+  exchangeCherryMoneyGoogleCode,
   type CherryMoneyBootstrap,
   type CherryMoneyPaymentDraft,
 } from "@cherry-metropolis/cherry-money-client";
 
-type PendingAction = "load" | "create" | null;
+type PendingAction = "load" | "create" | "google" | "disconnect" | null;
 
 const PLACEHOLDER_COLOR = "#94a3b8";
 
@@ -35,18 +37,21 @@ type CherryMoneyDraftCardProps = {
   defaultBaseUrl: string;
   selectedDraftId: string | null;
   onSelectDraft: (draft: CherryMoneyPaymentDraft | null) => void;
+  onConnected?: () => void;
 };
 
 export function CherryMoneyDraftCard({
   defaultBaseUrl,
   selectedDraftId,
   onSelectDraft,
+  onConnected,
 }: CherryMoneyDraftCardProps) {
   const [baseUrl, setBaseUrl] = useState(defaultBaseUrl);
   const [token, setToken] = useState("");
   const [workspace, setWorkspace] = useState<CherryMoneyBootstrap | null>(null);
   const [pending, setPending] = useState<PendingAction>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("");
@@ -65,34 +70,126 @@ export function CherryMoneyDraftCard({
     }
   }, [baseUrl, token]);
 
+  async function connectWithToken(
+    nextToken: string,
+    source: "manual" | "google",
+  ) {
+    const nextClient = new CherryMoneyClient({
+      baseUrl,
+      bearerToken: nextToken,
+    });
+    const next = await nextClient.bootstrap();
+
+    setToken(nextToken);
+    setWorkspace(next);
+    setError(null);
+    setNotice(
+      source === "google"
+        ? "Signed in to Cherry Money with Google. The API token is held only in this page's memory."
+        : "Cherry Money connection established.",
+    );
+    onConnected?.();
+
+    if (selectedDraftId) {
+      const selected = next.paymentDrafts.find(
+        (draft) => draft.id === selectedDraftId,
+      );
+      if (!selected) onSelectDraft(null);
+    }
+  }
+
   async function loadWorkspace() {
     setPending("load");
     setError(null);
+    setNotice(null);
 
     try {
-      const nextClient = new CherryMoneyClient({
-        baseUrl,
-        bearerToken: token,
-      });
-      const next = await nextClient.bootstrap();
-      setWorkspace(next);
-
-      if (selectedDraftId) {
-        const selected = next.paymentDrafts.find(
-          (draft) => draft.id === selectedDraftId,
-        );
-        if (!selected) onSelectDraft(null);
-      }
+      await connectWithToken(token, "manual");
     } catch (caught) {
       setWorkspace(null);
       onSelectDraft(null);
+      const message =
+        caught instanceof Error ? caught.message : "Unable to load Cherry Money.";
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "Unable to load Cherry Money.",
+        /not signed in|sign in to continue|unauthenticated/i.test(message)
+          ? "This Cherry Money token is expired or invalid. Sign in with Google or paste a new temporary token."
+          : message,
       );
     } finally {
       setPending(null);
+    }
+  }
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof globalThis.location === "undefined") {
+      return;
+    }
+
+    const hash = globalThis.location.hash;
+
+    if (!hash.startsWith("#google-auth=") && !hash.startsWith("#google-error=")) {
+      return;
+    }
+
+    const raw = hash.slice(hash.indexOf("=") + 1);
+    globalThis.history?.replaceState(
+      null,
+      "",
+      globalThis.location.pathname + globalThis.location.search,
+    );
+
+    if (hash.startsWith("#google-error=")) {
+      try {
+        setError(decodeURIComponent(raw));
+      } catch {
+        setError("Cherry Money Google sign-in could not be completed.");
+      }
+      return;
+    }
+
+    setPending("google");
+    setError(null);
+    setNotice("Completing secure Cherry Money sign-in…");
+
+    void exchangeCherryMoneyGoogleCode({
+      baseUrl,
+      code: raw,
+    })
+      .then((result) => connectWithToken(result.token, "google"))
+      .catch((caught: unknown) => {
+        setWorkspace(null);
+        onSelectDraft(null);
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "Cherry Money Google sign-in could not be completed.",
+        );
+      })
+      .finally(() => {
+        setPending(null);
+      });
+  }, []);
+
+  function startGoogleSignIn() {
+    if (Platform.OS !== "web" || typeof globalThis.location === "undefined") {
+      setError("Google sign-in is available in the Cherry Pay web app.");
+      return;
+    }
+
+    try {
+      setError(null);
+      setNotice("Opening Cherry Money secure Google sign-in…");
+      const loginUrl = buildCherryMoneyGoogleLoginUrl(
+        baseUrl,
+        globalThis.location.origin,
+      );
+      globalThis.location.assign(loginUrl);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to start Cherry Money Google sign-in.",
+      );
     }
   }
 
@@ -142,11 +239,20 @@ export function CherryMoneyDraftCard({
     }
   }
 
-  function disconnect() {
-    setToken("");
-    setWorkspace(null);
-    setError(null);
-    onSelectDraft(null);
+  async function disconnect() {
+    setPending("disconnect");
+    try {
+      await client?.logout();
+    } catch {
+      // The local session is cleared even if the server token is already invalid.
+    } finally {
+      setToken("");
+      setWorkspace(null);
+      setError(null);
+      setNotice(null);
+      onSelectDraft(null);
+      setPending(null);
+    }
   }
 
   return (
@@ -154,8 +260,9 @@ export function CherryMoneyDraftCard({
       <Text style={styles.eyebrow}>CHERRY MONEY BUSINESS CONTEXT</Text>
       <Text style={styles.title}>Bind a real Cherry Money payment draft.</Text>
       <Text style={styles.body}>
-        The Metropolis app reads the existing authenticated WebMCP bridge. The
-        bearer token stays only in app memory and is never written to disk.
+        The Metropolis app reads the authenticated WebMCP bridge. On web, use
+        Cherry Money's Google sign-in; the resulting API token stays only in
+        page memory and is never written to browser storage or disk.
       </Text>
 
       {Platform.OS === "web" ? (
@@ -191,6 +298,27 @@ export function CherryMoneyDraftCard({
         {Platform.OS === "web" ? "Live Cherry Money connection (optional)" : "Live Cherry Money connection"}
       </Text>
 
+      {Platform.OS === "web" && !workspace ? (
+        <View style={styles.authPanel}>
+          <Text style={styles.authTitle}>Sign in to Cherry Money</Text>
+          <Text style={styles.muted}>
+            Use the Google account already linked to the Cherry Money demo
+            company. Cherry Money returns a short-lived one-time browser code;
+            this page exchanges it for an in-memory Sanctum token.
+          </Text>
+          <ActionButton
+            disabled={pending !== null}
+            label={
+              pending === "google"
+                ? "Completing Google sign-in…"
+                : "Continue with Google"
+            }
+            onPress={startGoogleSignIn}
+            primary
+          />
+        </View>
+      ) : null}
+
       <Text style={styles.label}>Cherry Money API</Text>
       <TextInput
         autoCapitalize="none"
@@ -201,13 +329,17 @@ export function CherryMoneyDraftCard({
         value={baseUrl}
       />
 
-      <Text style={styles.label}>Temporary API token</Text>
+      <Text style={styles.label}>
+        {Platform.OS === "web"
+          ? "Temporary API token (advanced fallback)"
+          : "Temporary API token"}
+      </Text>
       <TextInput
         autoCapitalize="none"
         autoCorrect={false}
         editable={pending === null}
         onChangeText={setToken}
-        placeholder="Sanctum bearer token"
+        placeholder="Paste a fresh Sanctum bearer token"
         secureTextEntry
         style={styles.input}
         value={token}
@@ -223,8 +355,8 @@ export function CherryMoneyDraftCard({
         {workspace ? (
           <ActionButton
             disabled={pending !== null}
-            label="Disconnect"
-            onPress={disconnect}
+            label={pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
+            onPress={() => void disconnect()}
           />
         ) : null}
       </View>
@@ -336,6 +468,7 @@ export function CherryMoneyDraftCard({
         </>
       ) : null}
 
+      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Text style={styles.note}>
@@ -416,6 +549,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginTop: 4,
+  },
+  authPanel: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14,
+  },
+  authTitle: {
+    fontSize: 15,
+    fontWeight: "700",
   },
   demoPanel: {
     backgroundColor: "#f0fdf4",
@@ -534,6 +679,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#e2e8f0",
     height: 1,
     marginVertical: 4,
+  },
+  notice: {
+    color: "#166534",
+    fontSize: 13,
+    lineHeight: 19,
   },
   error: {
     color: "#b91c1c",

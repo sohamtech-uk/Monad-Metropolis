@@ -32,6 +32,9 @@ jobs:
         run: node --test tests/browser-fetch.test.mjs
       - name: Typecheck
         run: npm run check
+
+      - name: Aurora Intents plan tests
+        run: npm run aurora:test
       - name: Build Expo web app
         run: npm run web:build
       - name: Consumer browser smoke test (offline, no payments)

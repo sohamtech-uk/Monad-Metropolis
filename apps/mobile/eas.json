@@ -19,7 +19,12 @@
         "EXPO_PUBLIC_AUSD_FAUCET_ADDRESS": "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
         "EXPO_PUBLIC_SETTLEMENT_REGISTRY_ADDRESS": "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf",
         "EXPO_PUBLIC_ENVIO_GRAPHQL_URL": "https://metropolis.cherrymoney.co.uk/graphql/",
-        "EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL": "https://cherrymoney.co.uk"
+        "EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL": "https://cherrymoney.co.uk",
+        "EXPO_PUBLIC_AURORA_INTENTS_ENABLED": "true",
+        "EXPO_PUBLIC_AURORA_INTENTS_API_BASE_URL": "https://intents-connect-alpha-api.aurora.dev",
+        "EXPO_PUBLIC_AURORA_INTENTS_PROXY_URL": "https://cherrymoney.co.uk/api/aurora-intents/",
+        "EXPO_PUBLIC_AURORA_BASE_RPC_URL": "https://mainnet.base.org",
+        "EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL": "https://monadscan.com"
       }
     },
     "production": {
@@ -37,7 +42,12 @@
         "EXPO_PUBLIC_AUSD_FAUCET_ADDRESS": "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
         "EXPO_PUBLIC_SETTLEMENT_REGISTRY_ADDRESS": "0xdcB418C6e719C40c8e1F9B446cD850330219EEFf",
         "EXPO_PUBLIC_ENVIO_GRAPHQL_URL": "https://metropolis.cherrymoney.co.uk/graphql/",
-        "EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL": "https://cherrymoney.co.uk"
+        "EXPO_PUBLIC_CHERRY_MONEY_API_BASE_URL": "https://cherrymoney.co.uk",
+        "EXPO_PUBLIC_AURORA_INTENTS_ENABLED": "true",
+        "EXPO_PUBLIC_AURORA_INTENTS_API_BASE_URL": "https://intents-connect-alpha-api.aurora.dev",
+        "EXPO_PUBLIC_AURORA_INTENTS_PROXY_URL": "https://cherrymoney.co.uk/api/aurora-intents/",
+        "EXPO_PUBLIC_AURORA_BASE_RPC_URL": "https://mainnet.base.org",
+        "EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL": "https://monadscan.com"
       }
     }
   },

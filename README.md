@@ -101,3 +101,4 @@ See:
 - `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`
 - `docs/AURORA_INTENTS.md`
+- `docs/BOUNTY_TARGETS.md`

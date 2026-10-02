@@ -24,29 +24,36 @@
 
 ## Priority
 
-### P0
+See [BOUNTY_TARGETS.md](./BOUNTY_TARGETS.md) for the selected sponsor-bounty evidence plan.
+
+### P0 — preserve the qualifying path
 - Mera onboarding/recovery
 - AUSD balance
 - AUSD send/receive
 - real Monad transaction
 - usable mobile payment flow
+- Cherry Money payment-draft binding
+- CRE deterministic reconciliation evidence
 - final demo
 
-### P1
-- Cherry Money invoice/payment-draft integration
-- CRE orchestration
-- deterministic reconciliation evidence bound to the source Cherry Money payment draft
+### P1 — selected bounty/UX work
+- Aurora Intents: one reliable any-chain-to-Monad payment/funding route
+- sponsored/gas UX using supported Monad mobile patterns where it does not destabilise Mera
+- visible live Envio HyperSync evidence around the qualifying payment
+- contract source verification and explorer evidence
+- bounty-specific screenshots/runbooks/evidence
 
 ### P2
 - Envio indexing and analytics
 - Mera PRF non-wallet capability
+- consumer earnings/rewards/gifts after the core payment path remains stable
 
 ### P3
 - additional rail-routing intelligence
-- additional cross-chain experimentation
+- broader cross-chain coverage beyond the one Aurora demo route
 - additional AI features
 
-Do not sacrifice a stable P0/P1 demo to add optional sponsor functionality.
+Do not sacrifice the stable qualifying payment + reconciliation path to add sponsor functionality.
 
 ## Hackathon accounting boundary
 

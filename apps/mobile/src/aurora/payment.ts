@@ -3,65 +3,23 @@ import {
   createIntentsConnectApi,
   type Execution,
   type ExecutionPlan,
-  type Recipe,
   type RunnerEvent,
 } from "@aurora-is-near/intents-connect";
-import {
-  formatUnits,
-  getAddress,
-  parseUnits,
-  type Address,
-} from "viem";
+import { formatUnits } from "viem";
 
 import type { MeraLiveAccount } from "../mera/account";
 import {
-  AURORA_DEMO_MAX_USDC,
   AURORA_INTENTS_API_BASE_URL,
   AURORA_INTENTS_PROXY_URL,
-  BASE_CHAIN_ID,
-  BASE_USDC_ADDRESS,
-  BASE_USDC_ASSET_ID,
   MONAD_MAINNET_EXPLORER_URL,
-  MONAD_USDC_ADDRESS,
-  MONAD_USDC_ASSET_ID,
   USDC_DECIMALS,
 } from "./config";
 import { createMeraAuroraWalletConnector } from "./meraConnector";
-
-type CherryPayMonadParams = Readonly<{
-  recipient: Address;
-}>;
-
-const CHERRY_PAY_MONAD_USDC_RECIPE: Recipe<CherryPayMonadParams> = {
-  id: "cherry-pay-monad-usdc",
-  intent: "cherry_pay_cross_chain_payment",
-  title: "Pay with USDC on Monad",
-  flow: "bridge-in",
-  type: "evm",
-  destination: {
-    chain: "monad",
-    assetId: MONAD_USDC_ASSET_ID,
-    tokenAddress: MONAD_USDC_ADDRESS,
-  },
-  buildSteps: ({ amount }, { recipient }) => [
-    {
-      to: MONAD_USDC_ADDRESS,
-      functionSignature: "transfer(address,uint256)",
-      parameters: [recipient, amount],
-      value: "0",
-      metadata: {
-        product: "Cherry Pay Global",
-        purpose: "cross_chain_payment",
-      },
-    },
-  ],
-};
-
-export type AuroraPaymentPlanInput = Readonly<{
-  recipient: string;
-  amount: string;
-  depositViaWallet: boolean;
-}>;
+import {
+  buildBaseUsdcToMonadPaymentPlan,
+  type AuroraPaymentPlanInput,
+  type CherryPayMonadParams,
+} from "./plan";
 
 export type AuroraPaymentPreview = Readonly<{
   executionId: string;
@@ -73,55 +31,6 @@ export type AuroraPaymentPreview = Readonly<{
   networkFeeAtomic: string | null;
   plan: ExecutionPlan<CherryPayMonadParams>;
 }>;
-
-export function parseAuroraUsdcAmount(value: string): bigint {
-  const trimmed = value.trim();
-
-  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(trimmed)) {
-    throw new Error("Enter a USDC amount with no more than 6 decimal places.");
-  }
-
-  const amount = parseUnits(trimmed, USDC_DECIMALS);
-
-  if (amount <= 0n) {
-    throw new Error("Payment amount must be greater than zero.");
-  }
-
-  if (amount > AURORA_DEMO_MAX_USDC) {
-    throw new Error(
-      "This hackathon route is capped at 100 USDC per payment.",
-    );
-  }
-
-  return amount;
-}
-
-export function buildBaseUsdcToMonadPaymentPlan(
-  input: AuroraPaymentPlanInput,
-): ExecutionPlan<CherryPayMonadParams> {
-  const recipient = getAddress(input.recipient.trim());
-  const amount = parseAuroraUsdcAmount(input.amount);
-
-  return {
-    recipe: CHERRY_PAY_MONAD_USDC_RECIPE,
-    params: { recipient },
-    quote: {
-      originAsset: BASE_USDC_ASSET_ID,
-      destinationAsset: MONAD_USDC_ASSET_ID,
-      amount: amount.toString(),
-      swapType: "EXACT_INPUT",
-      slippageTolerance: 100,
-      deadline: new Date(Date.now() + 15 * 60_000).toISOString(),
-    },
-    originChain: "base",
-    originToken: {
-      contractAddress: BASE_USDC_ADDRESS,
-      decimals: USDC_DECIMALS,
-    },
-    originChainId: BASE_CHAIN_ID,
-    depositViaWallet: input.depositViaWallet,
-  };
-}
 
 export function createCherryAuroraApi() {
   const proxy = AURORA_INTENTS_PROXY_URL.trim();
@@ -188,5 +97,3 @@ export function monadMainnetTransactionUrl(execution: Execution): string | null 
     ? MONAD_MAINNET_EXPLORER_URL.replace(/\/$/, "") + "/tx/" + hash
     : null;
 }
-
-export { CHERRY_PAY_MONAD_USDC_RECIPE };

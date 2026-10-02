@@ -1,0 +1,33 @@
+name: Payment preflight regression
+
+on:
+  pull_request:
+    paths:
+      - apps/mobile/src/mera/scopedSession.ts
+      - apps/mobile/src/mera/transactionPreflight.ts
+      - tests/payment-preflight.test.mjs
+      - .github/workflows/payment-preflight.yml
+  push:
+    branches: [main]
+    paths:
+      - apps/mobile/src/mera/scopedSession.ts
+      - apps/mobile/src/mera/transactionPreflight.ts
+      - tests/payment-preflight.test.mjs
+      - .github/workflows/payment-preflight.yml
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test recipient and fee guards (no RPC, credentials or payments)
+        run: node --experimental-strip-types --test tests/payment-preflight.test.mjs

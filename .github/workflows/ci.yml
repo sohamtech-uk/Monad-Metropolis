@@ -35,6 +35,8 @@ jobs:
 
       - name: Aurora Intents plan tests
         run: npm run aurora:test
+      - name: Envio live observation tests
+        run: npx --no-install tsx --test tests/envio-live.test.ts
       - name: Build Expo web app
         env:
           EXPO_PUBLIC_AURORA_INTENTS_ENABLED: "true"

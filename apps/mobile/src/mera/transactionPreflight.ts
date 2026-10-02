@@ -35,7 +35,16 @@ export type EstimatedFees = Readonly<{
   maxFeePerGas: bigint;
   maxPriorityFeePerGas: bigint;
 }>;
-export type CheckedGas = EstimatedFees & Readonly<{ gas: bigint }>;
+export type CheckedGas = EstimatedFees & Readonly<{
+  gas: bigint;
+  type: "eip1559";
+  gasPrice: undefined;
+  blobs: undefined;
+  blobVersionedHashes: undefined;
+  maxFeePerBlobGas: undefined;
+  kzg: undefined;
+  authorizationList: undefined;
+}>;
 
 export function formatMon(wei: bigint): string {
   if (wei < 0n) throw new Error("MON balance cannot be negative.");
@@ -65,7 +74,14 @@ export function requireGasBudget(
       "Request Agora test AUSD adds tokens, not MON. No transaction was signed by this check.",
     );
   }
-  return Object.freeze({ gas, ...fees });
+  // Simulation returns a transaction-type union. Pin the actual write to type 2
+  // and explicitly clear fields from incompatible legacy/blob/7702 envelopes.
+  return Object.freeze({
+    gas, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+    type: "eip1559", gasPrice: undefined, blobs: undefined,
+    blobVersionedHashes: undefined, maxFeePerBlobGas: undefined,
+    kzg: undefined, authorizationList: undefined,
+  });
 }
 
 function isInsufficientNativeBalance(error: unknown): boolean {

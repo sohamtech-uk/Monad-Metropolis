@@ -44,10 +44,11 @@ function ProductShell() {
   function nav(vertical: boolean) {
     return <View accessibilityRole="tablist" style={vertical ? styles.sideNav : styles.bottomNav}>
       {NAV.map((item) => <Pressable key={item.key} accessibilityRole="tab" accessibilityLabel={item.label}
-        accessibilityState={{ selected: navParent(surface) === item.key, disabled: busy }} disabled={busy}
+        accessibilityState={{ selected: navParent(surface) === item.key, disabled: busy }}
+        aria-selected={navParent(surface) === item.key} disabled={busy}
         onPress={() => go(item.key)} style={[styles.navItem, vertical ? styles.navVertical : styles.navHorizontal,
           navParent(surface) === item.key && styles.navSelected]}>
-        <Text accessible={false} style={[styles.navIcon, navParent(surface) === item.key && { color: palette.cherry }]}>{item.icon}</Text>
+        <Text accessible={false} aria-hidden style={[styles.navIcon, navParent(surface) === item.key && { color: palette.cherry }]}>{item.icon}</Text>
         <Text style={[styles.navLabel, navParent(surface) === item.key && { color: palette.cherry }]}>{item.label}</Text>
       </Pressable>)}
     </View>;

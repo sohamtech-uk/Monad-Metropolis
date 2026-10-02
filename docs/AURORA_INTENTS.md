@@ -58,9 +58,10 @@ Cherry does not implement its own solver, bridge or execution state machine.
 ## API-key proxy
 
 Aurora execution-create requests use a priced API key. The key is never shipped
-in Expo. The SDK is configured with:
+in Expo. The SDK is configured with a fail-closed feature gate:
 
 ```env
+EXPO_PUBLIC_AURORA_INTENTS_ENABLED=true
 EXPO_PUBLIC_AURORA_INTENTS_API_BASE_URL=https://intents-connect-alpha-api.aurora.dev
 EXPO_PUBLIC_AURORA_INTENTS_PROXY_URL=https://cherrymoney.co.uk/api/aurora-intents/
 ```
@@ -75,6 +76,10 @@ AURORA_INTENTS_API_KEY
 ```
 
 Never commit or paste that value into a client/public environment variable.
+
+Keep `EXPO_PUBLIC_AURORA_INTENTS_ENABLED=false` until the server proxy is
+deployed and the server-side key has been configured. The tab remains visible
+but cannot open a Mera session or move funds while disabled.
 
 ## Wallet UX
 

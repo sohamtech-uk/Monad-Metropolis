@@ -80,8 +80,14 @@ export function ReceiptCard({ receipt }: { receipt: PaymentReceipt }) {
     <Detail label="Network" value={receipt.network + " · chain 10143"} />
     <Detail label="Confirmed" value={new Date(receipt.confirmedAtMs).toLocaleString()} />
     <Milestone complete title="Transfer confirmed" detail={"Recorded in block " + receipt.block + "."} />
-    <Milestone complete={receipt.correlationConfirmed} title="Business reference" detail="The payment is linked to its approved draft reference." />
-    <Milestone complete={receipt.indexed} title="Indexed match" detail="Envio checks this exact transaction, not an unrelated recent transfer." />
+    <Milestone complete={receipt.correlationConfirmed} title="Business reference"
+      detail={receipt.correlationConfirmed
+        ? "The payment is linked to its approved draft reference on-chain."
+        : "The transfer is confirmed, but its on-chain business reference has not been confirmed. Do not resend the payment."} />
+    <Milestone complete={receipt.indexed} title="Indexed match"
+      detail={receipt.indexed
+        ? "Envio matched this exact transaction and business reference."
+        : "An exact indexed match has not been established yet. An indexing delay does not mean the transfer failed."} />
     <Notice>On-chain confirmation is not an accounting posting. Cherry Money's draft has not been marked paid by this screen.</Notice>
     <Disclosure title="Transaction details"><Text selectable style={ui.mono}>{receipt.hash}</Text>
       <Action secondary label={"View on explorer · " + shortAddress(receipt.hash)} onPress={() => {

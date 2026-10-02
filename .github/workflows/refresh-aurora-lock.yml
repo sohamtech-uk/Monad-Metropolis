@@ -1,0 +1,42 @@
+name: Refresh Aurora lockfile
+
+on:
+  push:
+    branches:
+      - feat/aurora-intents-cross-chain-pay
+    paths:
+      - apps/mobile/package.json
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/aurora-intents-cross-chain-pay
+          fetch-depth: 0
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Refresh npm lockfile from the declared workspace dependency
+        run: npm install --package-lock-only --ignore-scripts --workspaces --include-workspace-root
+
+      - name: Commit generated lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "sohamtechuk"
+          git config user.email "info@theinnerpeace.org"
+          git add package-lock.json
+          git commit -m "chore: lock Aurora Intents SDK dependency"
+          git push origin HEAD:feat/aurora-intents-cross-chain-pay

@@ -22,7 +22,7 @@
     "web:build": "npm run web:build -w @cherry-metropolis/mobile",
     "consumer:build": "node scripts/build-consumer-contracts.mjs",
     "consumer:test": "npm run consumer:build && node --experimental-strip-types --test tests/consumer-*.test.mjs",
-    "aurora:test": "tsx --test tests/aurora-intents.test.mjs"
+    "aurora:test": "tsx --test tests/aurora-intents.test.ts"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

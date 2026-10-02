@@ -1,3 +1,6 @@
+export const AURORA_INTENTS_ENABLED =
+  process.env.EXPO_PUBLIC_AURORA_INTENTS_ENABLED === "true";
+
 export const AURORA_INTENTS_API_BASE_URL =
   process.env.EXPO_PUBLIC_AURORA_INTENTS_API_BASE_URL ??
   "https://intents-connect-alpha-api.aurora.dev";

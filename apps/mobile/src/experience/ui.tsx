@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { receiptStage, shortAddress, type PaymentReceipt } from "./model";
 
 export const palette = {
@@ -25,7 +25,8 @@ export const ui = StyleSheet.create({
 export function Action({ label, onPress, disabled = false, loading = false, secondary = false, testID }: {
   label: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean; testID?: string;
 }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading, busy: loading }}
+  return <Pressable accessibilityRole="button" accessibilityLabel={label}
+    accessibilityState={{ disabled: disabled || loading, busy: loading }} aria-busy={loading}
     disabled={disabled || loading} onPress={onPress} testID={testID}
     style={({ pressed }) => [styles.action, secondary && styles.secondary, (disabled || loading) && styles.disabled,
       pressed && { opacity: 0.82, transform: [{ scale: 0.99 }] }]}>
@@ -48,8 +49,10 @@ export function Disclosure({ title, children, defaultOpen = false, keepMounted =
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return <View style={styles.disclosure}>
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} style={styles.disclosureButton}>
-      <Text style={[ui.label, ui.grow]}>{title}</Text><Text style={styles.chevron} accessible={false}>{open ? "−" : "+"}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }}
+      aria-expanded={open} onPress={() => setOpen(!open)} style={styles.disclosureButton}>
+      <Text style={[ui.label, ui.grow]}>{title}</Text>
+      <Text style={styles.chevron} accessible={false} aria-hidden>{open ? "−" : "+"}</Text>
     </Pressable>
     {open || keepMounted ? <View style={open ? styles.disclosureContent : ui.hidden}
       accessibilityElementsHidden={!open} importantForAccessibility={open ? "auto" : "no-hide-descendants"}>{children}</View> : null}
@@ -60,7 +63,7 @@ export function Detail({ label, value, selectable = false }: { label: string; va
 }
 export function Milestone({ title, detail, complete }: { title: string; detail: string; complete: boolean }) {
   return <View style={styles.milestone}>
-    <Text accessible={false} style={[styles.marker, complete && styles.markerComplete]}>{complete ? "✓" : "○"}</Text>
+    <Text accessible={false} aria-hidden style={[styles.marker, complete && styles.markerComplete]}>{complete ? "✓" : "○"}</Text>
     <View style={ui.grow}><Text style={ui.label}>{title} · {complete ? "complete" : "pending"}</Text><Text style={ui.small}>{detail}</Text></View>
   </View>;
 }

@@ -82,9 +82,10 @@ AURORA_INTENTS_API_KEY
 
 Never commit or paste that value into a client/public environment variable.
 
-Keep `EXPO_PUBLIC_AURORA_INTENTS_ENABLED=false` until the server proxy is
-deployed and the server-side key has been configured. The tab remains visible
-but cannot open a Mera session or move funds while disabled.
+For hackathon builds, `EXPO_PUBLIC_AURORA_INTENTS_ENABLED=true` is now set in
+the EAS preview/production profiles and in the CI web build. The server remains
+the final fail-closed boundary: if the deployment environment does not contain
+the Aurora API key, execution creation returns 503 and no funds move.
 
 ## Wallet UX
 

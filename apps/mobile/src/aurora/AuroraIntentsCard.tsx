@@ -350,6 +350,7 @@ export function AuroraIntentsCard() {
       {preview ? (
         <View style={styles.card}>
           <Text style={styles.heading}>3. Review the route</Text>
+          <Metric label="Aurora route" value="Live support confirmed" />
           <Metric label="You provide" value={preview.sourceAmountFormatted + " USDC on Base"} />
           <Metric
             label="Minimum destination"

@@ -35,10 +35,10 @@ with sync_playwright() as playwright:
         expect(page.get_by_text('Passkey-powered business payments', exact=True)).to_be_visible()
         button('Pay from any chain').click()
         expect(page.get_by_text('Pay with what you already have', exact=True)).to_be_visible()
-        expect(page.get_by_text(re.compile('Aurora Intents is installed but disabled'))).to_be_visible()
-        expect(button('Use existing passkey')).to_be_disabled()
-        expect(button('Create passkey')).to_be_disabled()
-        page.screenshot(path=str(out / 'aurora-disabled-desktop.png'))
+        expect(page.get_by_text(re.compile('Experimental hackathon route'))).to_be_visible()
+        expect(button('Use existing passkey')).to_be_enabled()
+        expect(button('Create passkey')).to_be_enabled()
+        page.screenshot(path=str(out / 'aurora-enabled-desktop.png'))
         button('Earnings · Rewards · Gifts').click()
         expect(page.get_by_text('Earn, give and get rewarded.', exact=True)).to_be_visible()
         expect(page.get_by_text(re.compile('On-chain actions are disabled'))).to_be_visible()
@@ -65,7 +65,7 @@ with sync_playwright() as playwright:
         expect(page.get_by_text('Passkey-powered business payments', exact=True)).to_be_visible()
         assert not errors, errors
         result = {'passed': True, 'mode': 'offline compiled-bundle UI check', 'paymentsExecuted': 0,
-                  'checks': ['supplier flow retained', 'Aurora pay-from-any-chain surface', 'Aurora default-off mainnet gate',
+                  'checks': ['supplier flow retained', 'Aurora pay-from-any-chain surface', 'Aurora enabled build surface',
                              'earnings/rewards/gifts tabs', 'default-off write controls',
                              'explicit simulated earnings preview', 'gift UTC timing inputs',
                              'unsigned CRE evidence warning', '390px mobile viewport', 'no uncaught JavaScript exceptions']}

@@ -67,7 +67,7 @@ export async function previewAuroraPayment(
   input: AuroraPaymentPlanInput,
 ): Promise<AuroraPaymentPreview> {
   const api = createCherryAuroraApi();
-  const supported = await api.listSupportedTokens();
+  const supported = await api.listSupportedTokens("inOperation");
 
   const baseUsdcSupported =
     supported.in?.some((token) => token.assetId === BASE_USDC_ASSET_ID) === true;

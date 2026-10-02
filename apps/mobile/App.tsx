@@ -225,6 +225,9 @@ export default function App() {
               "https://cherrymoney.co.uk"
             }
             selectedDraftId={paymentDraft?.id ?? null}
+            onConnected={() => {
+              setCurrentStep(2);
+            }}
             onSelectDraft={(draft) => {
               setPaymentDraft(draft);
               setLastTransfer(null);

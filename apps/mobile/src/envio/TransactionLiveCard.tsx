@@ -65,8 +65,6 @@ export function TransactionLiveCard({ progress, active, indexEndpoint, onIndexed
         setSnapshot(primary); setReferenceSnapshot(secondary); setRecheck(changed);
         setSamples((existing) => appendSample(changed ? [] : existing, primary));
         setError(""); setNow(Date.now()); failures = 0;
-        // Once located, pin a bounded historical window so a slow receipt wait
-        // cannot cause this payment to slide out of a moving tip-only feed.
         if (anchor === null) {
           const evidence = transactionEvidence(latest.current, [primary], Date.now());
           if (evidence.transfer) setLocatedBlock(BigInt(evidence.transfer.blockNumber));
@@ -103,9 +101,16 @@ export function TransactionLiveCard({ progress, active, indexEndpoint, onIndexed
   const evidence = transactionEvidence(progress, usable ? [snapshot!, ...(referenceSnapshot ? [referenceSnapshot] : [])] : [], now);
   const indexed = active && foreground && now - index.at <= 20000 && index.state === "matched"
     && !recheck && !evidence.conflict && progress.receipt?.status === "success";
-  useEffect(() => { notify.current(indexed); }, [indexed]);
+  // Receipt/correlation completion can reset the parent's derived state. Re-emit
+  // the established indexed result when that public progress object changes too.
+  useEffect(() => { notify.current(indexed); }, [indexed, progress]);
+  const missing = !snapshot || (needsSeparateReference && !referenceSnapshot);
+  const stale = (snapshot !== null && !fresh(snapshot, now))
+    || (needsSeparateReference && referenceSnapshot !== null && !fresh(referenceSnapshot, now));
+  const partial = (snapshot !== null && !snapshot.complete)
+    || (needsSeparateReference && referenceSnapshot !== null && !referenceSnapshot.complete);
   const state = !watching ? "PAUSED" : effectiveError ? "UNAVAILABLE" : recheck || evidence.conflict ? "RECHECK REQUIRED"
-    : !snapshot ? "CONNECTING" : !fresh(snapshot, now) ? "STALE" : !snapshot.complete ? "PARTIAL SCAN" : "LIVE · PROVISIONAL";
+    : missing ? "CONNECTING" : stale ? "STALE" : partial ? "PARTIAL SCAN" : "LIVE · PROVISIONAL";
   return <TransactionLiveVisual progress={progress} snapshot={snapshot} samples={samples} now={now}
     state={state} usable={usable} indexed={indexed} error={effectiveError} indexError={index.error}
     transferObserved={!!evidence.transfer} referenceObserved={!!evidence.correlation}

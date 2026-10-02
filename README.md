@@ -100,3 +100,4 @@ See:
 - `docs/AGORA_TESTNET.md`
 - `docs/PASSKEY_DOMAIN.md`
 - `docs/ROADMAP.md`
+- `docs/AURORA_INTENTS.md`

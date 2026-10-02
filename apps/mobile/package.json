@@ -33,7 +33,11 @@
     "react-dom": "19.2.8",
     "react-native-web": "~0.21.0",
     "@expo/metro-runtime": "~57.0.10",
-    "@cherry-metropolis/consumer-payments": "0.1.0"
+    "@cherry-metropolis/consumer-payments": "0.1.0",
+    "@aurora-is-near/intents-connect": "7.24.2"
   },
-  "devDependencies": { "@types/react": "~19.2.18", "typescript": "~6.0.3" }
+  "devDependencies": {
+    "@types/react": "~19.2.18",
+    "typescript": "~6.0.3"
+  }
 }

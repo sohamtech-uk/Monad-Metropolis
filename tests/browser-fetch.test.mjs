@@ -26,7 +26,7 @@ test('shared service clients retain the browser fetch receiver', async () => {
                 currency: 'USD',
                 email: 'demo@example.com',
                 name: 'Demo User',
-                company_id: 'company-1',
+                company_id: 42,
               },
             }
           : { connected: true };
@@ -58,6 +58,7 @@ test('shared service clients retain the browser fetch receiver', async () => {
     assert.equal(exchange.token, '1|browser-google-token');
     assert.equal(exchange.authMethod, 'google');
     assert.equal(exchange.user.company, 'Cherry Demo Ltd');
+    assert.equal(exchange.user.companyId, '42');
 
     const dashboard = await envio.dashboard();
     assert.deepEqual(dashboard.latestSettlements, []);

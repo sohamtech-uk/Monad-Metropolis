@@ -54,7 +54,7 @@ jobs:
       - name: Live graphics component tests (explicit fixtures, not deployed)
         run: |
           mkdir -p build/live-graphics
-          npx --no-install esbuild tests/live-graphics.preview.tsx --bundle --platform=browser --jsx=automatic --alias:react-native=react-native-web --define:process.env.NODE_ENV='"production"' --outfile=build/live-graphics/index.js
+          npx --no-install esbuild tests/live-graphics.preview.tsx --bundle --platform=browser --jsx=automatic --alias:react-native=react-native-web --define:process.env='{}' --define:process.env.NODE_ENV='"production"' --outfile=build/live-graphics/index.js
           "$RUNNER_TEMP/cherry-browser-venv/bin/python" scripts/live_graphics_browser.py
       - name: Upload web build
         uses: actions/upload-artifact@v4
@@ -69,6 +69,13 @@ jobs:
         with:
           name: consumer-browser-check
           path: build/consumer-browser
+          if-no-files-found: ignore
+      - name: Save isolated graphics test bundle (not a deployable app)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-graphics-test-bundle
+          path: build/live-graphics
           if-no-files-found: ignore
 
   consumer-contracts:

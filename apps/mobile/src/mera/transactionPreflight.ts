@@ -43,6 +43,7 @@ export type CheckedGas = EstimatedFees & Readonly<{
   blobVersionedHashes: undefined;
   maxFeePerBlobGas: undefined;
   kzg: undefined;
+  sidecars: undefined;
   authorizationList: undefined;
 }>;
 
@@ -80,7 +81,7 @@ export function requireGasBudget(
     gas, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
     type: "eip1559", gasPrice: undefined, blobs: undefined,
     blobVersionedHashes: undefined, maxFeePerBlobGas: undefined,
-    kzg: undefined, authorizationList: undefined,
+    kzg: undefined, sidecars: undefined, authorizationList: undefined,
   });
 }
 

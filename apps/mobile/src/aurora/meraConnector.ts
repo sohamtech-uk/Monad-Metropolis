@@ -21,6 +21,7 @@ import {
 } from "./config";
 
 const ERC20_TRANSFER_ABI = parseAbi([
+  "function balanceOf(address account) view returns (uint256)",
   "function transfer(address to, uint256 amount) returns (bool)",
 ]);
 
@@ -102,6 +103,28 @@ async function transferBaseUsdc(
   });
   const publicClient = createPublicClient({ chain: base, transport });
   const walletClient = createWalletClient({ account, chain: base, transport });
+
+  const [usdcBalance, ethBalance] = await Promise.all([
+    publicClient.readContract({
+      address: getAddress(BASE_USDC_ADDRESS),
+      abi: ERC20_TRANSFER_ABI,
+      functionName: "balanceOf",
+      args: [getAddress(account.address)],
+    }),
+    publicClient.getBalance({ address: getAddress(account.address) }),
+  ]);
+
+  if (usdcBalance < amount) {
+    throw new Error(
+      "This Cherry Pay passkey account does not have enough Base USDC. Use the external wallet / exchange funding option or fund this address first.",
+    );
+  }
+
+  if (ethBalance === 0n) {
+    throw new Error(
+      "This Cherry Pay passkey account has no Base ETH for the source transfer gas. Use external funding or add a small Base ETH balance.",
+    );
+  }
 
   const simulation = await publicClient.simulateContract({
     account,

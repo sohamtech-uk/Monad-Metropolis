@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Image, Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Image, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import SupplierApp from "./App";
 import { AuroraIntentsCard } from "./src/aurora/AuroraIntentsCard";
@@ -12,7 +12,9 @@ import { Action, Badge, Disclosure, Notice, ReceiptCard, palette, ui } from "./s
 type Surface = "home" | "pay" | "supplier" | "aurora" | "activity" | "more" | "envio" | "labs";
 const NAV = [{ key: "home", label: "Home", icon: "⌂" }, { key: "pay", label: "Pay", icon: "↗" },
   { key: "activity", label: "Activity", icon: "≋" }, { key: "more", label: "More", icon: "⋯" }] as const;
-function navParent(surface: Surface) { return surface === "supplier" || surface === "aurora" ? "pay" : surface === "envio" || surface === "labs" ? "more" : surface; }
+function navParent(surface: Surface) {
+  return surface === "supplier" || surface === "aurora" ? "pay" : surface === "envio" || surface === "labs" ? "more" : surface;
+}
 
 export default function ConsumerApp() { return <SafeAreaProvider><ProductShell /></SafeAreaProvider>; }
 function ProductShell() {
@@ -32,7 +34,8 @@ function ProductShell() {
   }, []);
   function go(next: Surface) {
     if (busy) return;
-    setVisited((current) => new Set([...current, next])); setSurface(next);
+    setVisited((current) => new Set([...current, next]));
+    setSurface(next);
   }
   function nav(vertical: boolean) {
     return <View accessibilityRole="tablist" style={vertical ? styles.sideNav : styles.bottomNav}>
@@ -45,7 +48,7 @@ function ProductShell() {
       </Pressable>)}
     </View>;
   }
-  function panel(target: Surface, children: React.ReactNode) {
+  function panel(target: Surface, children: ReactNode) {
     return <View style={surface === target ? styles.pane : ui.hidden} accessibilityElementsHidden={surface !== target}
       importantForAccessibility={surface === target ? "auto" : "no-hide-descendants"}>{children}</View>;
   }
@@ -76,7 +79,7 @@ function ProductShell() {
               <Text style={styles.heroEyebrow}>YOUR NEXT PAYMENT</Text>
               {[['01', 'Choose the business payment'], ['02', 'Approve and review'], ['03', 'Track the confirmation']].map(([n, label]) =>
                 <View key={n} style={styles.heroStep}><Text style={styles.heroStepNumber}>{n}</Text><Text style={styles.heroStepText}>{label}</Text></View>)}
-              <Text style={styles.heroFootnote}>A clear next step, not a screen full of infrastructure.</Text>
+              <Text style={styles.heroFootnote}>A clear next step, from payment to receipt.</Text>
             </View> : null}
           </View>
           <View style={styles.sectionHeading}><Text accessibilityRole="header" style={ui.heading}>What would you like to do?</Text></View>
@@ -96,7 +99,7 @@ function ProductShell() {
               <Text style={ui.small}>Your receipt will appear here after confirmation. This is not a full wallet history or a balance statement.</Text>
             </>}
           </View>
-          <Notice>You're using a preview build. Supplier payments use test tokens; the separately labelled cross-chain beta uses mainnet USDC. No live balances or payment successes are fabricated.</Notice>
+          <Notice>Preview build. Supplier payments use test tokens. The separately labelled cross-chain beta uses real mainnet USDC and does not update your accounts.</Notice>
         </ScrollView>)}
         {panel("pay", <ScrollView contentContainerStyle={ui.page}>
           <Text style={ui.eyebrow}>CHOOSE YOUR PAYMENT</Text><Text accessibilityRole="header" style={ui.title}>Start with the outcome.</Text>
@@ -111,18 +114,18 @@ function ProductShell() {
           {!mainnetAccepted ? <View style={ui.card}>
             <Badge tone="warning">Real funds · separate beta route</Badge><Text accessibilityRole="header" style={ui.title}>Before you use mainnet</Text>
             <Text style={ui.body}>This route moves USDC from Base to a recipient on Monad. It is not the supplier testnet flow and does not update Cherry Money accounting.</Text>
-            <Notice warning>Transfers may be irreversible. Fees apply. This build caps an input at 100 USDC but is not approved here for a public launch. Check the recipient and quote before funding.</Notice>
+            <Notice warning>Transfers may be irreversible. Fees apply. This preview caps an input at 100 USDC. Check the recipient and quote before funding.</Notice>
             <Action label="Continue to mainnet preview" onPress={() => setMainnetAccepted(true)} />
             <Action secondary label="Use the testnet supplier flow instead" onPress={() => go("supplier")} />
             <Text style={ui.small}>Continuing only opens the interface. It does not sign or send a payment.</Text>
           </View> : <AuroraIntentsCard />}
         </ScrollView>) : null}
         {panel("activity", <ScrollView contentContainerStyle={ui.page}>
-          <Text style={ui.eyebrow}>PAYMENT ACTIVITY</Text><Text accessibilityRole="header" style={ui.title}>A receipt, not a guess.</Text>
+          <Text style={ui.eyebrow}>PAYMENT ACTIVITY</Text><Text accessibilityRole="header" style={ui.title}>Your payment receipt.</Text>
           <Text style={ui.body}>The latest confirmed supplier transfer from this session. Reloading clears this local view; it does not undo a payment.</Text>
           {receipt ? <ReceiptCard receipt={receipt} /> : <View style={ui.card}>
             <Text style={ui.heading}>No confirmed supplier payment in this session</Text>
-            <Text style={ui.body}>Nothing has been invented to fill this screen. Complete the supplier preview to see its receipt here.</Text>
+            <Text style={ui.body}>Complete a supplier payment to see its reference, confirmation and receipt here.</Text>
             <Action label="Start a supplier payment" onPress={() => go("supplier")} />
           </View>}
           <Disclosure title="Need to inspect on-chain activity?">
@@ -133,7 +136,7 @@ function ProductShell() {
         {panel("more", <ScrollView contentContainerStyle={ui.page}>
           <Text style={ui.eyebrow}>HELP & DETAILS</Text><Text accessibilityRole="header" style={ui.title}>Clarity at every step.</Text>
           <View style={ui.card}><Text style={ui.heading}>Demo & evidence workspace</Text>
-            <Text style={ui.body}>Keep the customer experience simple. Open the underlying observations when you need to inspect or demonstrate a payment.</Text>
+            <Text style={ui.body}>Inspect on-chain observations and follow the reference behind a payment.</Text>
             <Action secondary label="Open Envio live evidence" onPress={() => go("envio")} />
           </View>
           <Disclosure title="How the payment is checked">
@@ -145,11 +148,11 @@ function ProductShell() {
             <Text style={ui.body}>For a cross-chain execution, keep its execution ID and source deposit transaction. Check or resume that execution instead of creating another funded payment.</Text>
           </Disclosure>
           <Disclosure title="Passkeys, fees and privacy">
-            <Text style={ui.body}>Passkey authorisation is recipient-specific in the supplier preview. It expires and ends when the native app backgrounds. Test MON currently pays the network fees; gasless payments are not claimed.</Text>
-            <Text style={ui.small}>Never share a seed phrase, private key, API token or sign-in code. Public blockchains expose transaction information; this preview does not claim private payments.</Text>
+            <Text style={ui.body}>Passkey authorisation is recipient-specific in the supplier preview. It expires and ends when the native app backgrounds. Test MON currently pays the network fees; gasless payments are not yet available.</Text>
+            <Text style={ui.small}>Never share a seed phrase, private key, API token or sign-in code. Public blockchains expose transaction information; this preview does not provide private payments.</Text>
           </Disclosure>
           <Disclosure title="Experimental features · testnet only">
-            <Text style={ui.body}>Earnings, rewards and gifts remain in the experimental workspace, separate from the payment journey. Their existing feature gates remain unchanged.</Text>
+            <Text style={ui.body}>Explore testnet earnings, rewards and gifts in a separate workspace. On-chain actions remain subject to their feature controls.</Text>
             <Action secondary label="Open experimental features" onPress={() => go("labs")} />
           </Disclosure>
           <SupportCard />
@@ -165,10 +168,12 @@ function ProductShell() {
 }
 function RouteCard({ title, tag, description, action, onPress, warning = false }: {
   title: string; tag: string; description: string; action: string; onPress: () => void; warning?: boolean;
-}) { return <View style={[ui.card, styles.routeCard]}>
-  <Badge tone={warning ? "warning" : "neutral"}>{tag}</Badge><Text accessibilityRole="header" style={ui.heading}>{title}</Text>
-  <Text style={[ui.body, { flexGrow: 1 }]}>{description}</Text><Action secondary label={action} onPress={onPress} />
-</View>; }
+}) {
+  return <View style={[ui.card, styles.routeCard]}>
+    <Badge tone={warning ? "warning" : "neutral"}>{tag}</Badge><Text accessibilityRole="header" style={ui.heading}>{title}</Text>
+    <Text style={[ui.body, { flexGrow: 1 }]}>{description}</Text><Action secondary label={action} onPress={onPress} />
+  </View>;
+}
 function SupportCard() {
   const [error, setError] = useState("");
   return <View style={ui.card}><Text style={ui.heading}>Need a hand?</Text>
@@ -189,11 +194,11 @@ const styles = StyleSheet.create({
   bottomNav: { width: "100%", maxWidth: 640, alignSelf: "center", flexDirection: "row", gap: 4 }, navItem: { borderRadius: 12, alignItems: "center", justifyContent: "center", minHeight: 54 },
   navVertical: { flexDirection: "row", padding: 12, justifyContent: "flex-start", gap: 12 }, navHorizontal: { flex: 1, gap: 2, paddingVertical: 6 },
   navSelected: { backgroundColor: palette.cherrySoft }, navIcon: { fontSize: 22, lineHeight: 26, color: palette.muted }, navLabel: { fontSize: 12, color: palette.muted, fontWeight: "700" },
-  hero: { backgroundColor: palette.dark, borderRadius: 26, padding: 26, gap: 28 }, heroWide: { flexDirection: "row", padding: 34 }, heroText: { flex: 1, gap: 18, minWidth: 0 },
+  hero: { backgroundColor: palette.dark, borderRadius: 26, padding: 26, gap: 28 }, heroWide: { flexDirection: "row", padding: 34 }, heroText: { flexGrow: 1, flexShrink: 1, gap: 18, minWidth: 0 },
   heroTitle: { fontSize: 44, lineHeight: 49, fontWeight: "800", letterSpacing: -1.6, color: "#FFFFFF" }, heroEyebrow: { fontSize: 10, fontWeight: "700", letterSpacing: 1.6, color: "#B8D4C5" },
   heroBody: { fontSize: 16, lineHeight: 24, color: "#D5E5DC" }, heroFootnote: { color: "#B8D4C5", fontSize: 12, lineHeight: 19 },
-  heroSteps: { width: 260, borderLeftWidth: 1, borderLeftColor: "#36594B", paddingLeft: 25, justifyContent: "center", gap: 21 },
+  heroSteps: { width: 260, flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "#36594B", paddingLeft: 25, justifyContent: "center", gap: 21 },
   heroStep: { flexDirection: "row", alignItems: "center", gap: 12 }, heroStepNumber: { fontSize: 13, color: "#B8D4C5", fontWeight: "800" }, heroStepText: { flex: 1, fontSize: 14, lineHeight: 21, color: "#FFFFFF", fontWeight: "600" },
   sectionHeading: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between", alignItems: "center" },
-  cards: { gap: 16 }, routeCard: { flexGrow: 1, flexBasis: 0, minWidth: 0 }, busy: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: palette.amberSoft },
+  cards: { gap: 16 }, routeCard: { flexGrow: 1, flexShrink: 1, minWidth: 0 }, busy: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: palette.amberSoft },
 });

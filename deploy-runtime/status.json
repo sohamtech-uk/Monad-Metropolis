@@ -1,27 +1,13 @@
 {
-  "stage": "deployed",
-  "run_id": "36845723359",
-  "branch": "ops/hostinger-upload-20261001",
+  "stage": "awaiting_encrypted_credential",
+  "run_id": "37018825701",
+  "branch": "ops/hostinger-webmcp-auth-20261002",
   "site": "https://metropolis.cherrymoney.co.uk",
-  "time_utc": "2026-10-01T09:55:38Z",
-  "checks": {
-    "root_http_200": true,
-    "root_matches_tested_build": true,
-    "all_static_assets_match": true,
-    "passkey_files_unchanged": true,
-    "graphql": true,
-    "htaccess_and_graphql_untouched": true
-  },
-  "uploaded_files": [
-    "_expo/static/js/web/index-40d24dcb264402bd0596f06bddff0cde.js",
-    "_expo/static/js/web/native-035945efb6d0c5d54eeb70e42e8b4b9b.js",
-    "favicon.ico",
-    "metadata.json",
-    "index.html"
-  ],
-  "source_run_id": 36845540134,
-  "source_commit": "cc3ab12de6dca0c419e764015032484664bc856c",
-  "backup_path": "/.cherry-deployment-backups/36845723359",
-  "placeholder_moved": false,
-  "note": "No payments executed. Interactive passkey/payment testing remains a user action."
+  "time_utc": "2026-10-02T14:17:36Z",
+  "tls_hostname": "hstgr.io",
+  "certificate_sha256": "79a7c9aeaad8855c82f58598597b931b10429afec6234b621588f4e937b36dee",
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAtsvHoZMy7IakeXC05q3D\nKJgzVjPHNBLH11jX7J+W/9uR/IJOHjs483qXWdLjkgZOFUHN0jki/7iuZgC007UG\nYgF967I1I6+eh4RBhivvR8B0fzfVs91Cp+xqiy55Na7Nc/rKnNg0heHlerm/6/Lx\nz2EEoIrpCCqDx0uqEUTZwfMICqo68iQ9FGFKmT8NFCpDCLTIipmkLtJCiXItvsOy\nV9VXmRMiKEg6bjGCfEXCM2+TLcXatCkuL4ijcGYRHO5oqCJBpInopW4ItsqNw9j/\npjsz+zg17oRP/IzF4a1FzKF5GHYkViqiArFQUY5cPwuXAQDUj4l222O7zRxnzBKe\na/TEZ6jGQp0lGK8sPWDe+OVpN4OgLUPkAx36TzEKJS6HUUF0slEdidpZ/LJ3BtX6\njtnFWs4NWD2o/ChDmhweymDELY3ai7NqNv+l0Vt5COxnU4ln1NcjQxL0DLyP5k8P\nmQ3SDkKMrTimTA65Mjpnd7IcdkGcg/UNOhAaY+m44YQhAgMBAAE=\n-----END PUBLIC KEY-----\n",
+  "credential_path": "deploy-runtime/credentials-37018825701.json",
+  "source_run_id": 37018216013,
+  "source_commit": "3433bf9458c17ccbd466147e0b81af534275b4f6"
 }

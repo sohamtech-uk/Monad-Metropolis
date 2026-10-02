@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
           ready=false
           for attempt in $(seq 1 30); do
-            gh api 'repos/sohamtech-uk/Monad-Metropolis/contents/deploy-runtime/status.json?ref=ops%2Fhostinger-upload-20261001' --jq .content | base64 -d > "${RUNNER_TEMP}/deployment-status.json"
+            gh api 'repos/sohamtech-uk/Monad-Metropolis/contents/deploy-runtime/status.json?ref=ops%2Fhostinger-webmcp-auth-20261002' --jq .content | base64 -d > "${RUNNER_TEMP}/deployment-status.json"
             if jq -e '.stage == "deployed" and .source_commit == "3433bf9458c17ccbd466147e0b81af534275b4f6"' "${RUNNER_TEMP}/deployment-status.json" >/dev/null; then
               ready=true
               break

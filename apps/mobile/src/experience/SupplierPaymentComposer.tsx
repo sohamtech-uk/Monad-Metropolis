@@ -14,6 +14,13 @@ type Props = {
   onTransferSettled: (result: AusdTransferResult) => void;
   onBusyChange: (busy: boolean) => void;
 };
+// Memory-only guard survives screen/draft changes. It is NOT durable idempotency:
+// an authenticated server-side execution record is still required before launch.
+// Store public identity/result only, never a live account, signer or secret.
+const attemptedDrafts = new Map<string, {
+  key: string; identity: MeraAccountIdentity; transfer: AusdTransferResult | null;
+}>();
+
 /** Customer presentation over the existing scoped Mera adapter. No alternative signer or relay. */
 export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentity, onTransferSettled, onBusyChange }: Props) {
   const client = useMemo(() => new MonadReadClient(runtimeConfig), [runtimeConfig]);
@@ -52,8 +59,19 @@ export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentit
   useEffect(() => {
     session.current?.end("replaced"); session.current = null;
     setReview(null); setTransfer(null); setUncertain(false); setExpires(0);
-    setRecipient(""); setIdentity(null); setAusd(null); setMon(null); setError(""); setNotice("");
-  }, [key]);
+    setRecipient(""); setIdentity(null); setAusd(null); setMon(null); setError(""); setNotice(""); setFaucetHash("");
+    const previous = attemptedDrafts.get(paymentDraft.id);
+    if (previous) {
+      setIdentity(previous.identity); onIdentity(previous.identity);
+      if (previous.key === key && previous.transfer) {
+        setTransfer(previous.transfer); setRecipient(previous.transfer.recipient); onTransferSettled(previous.transfer);
+        setNotice("This draft already has a confirmed transfer in this app session. Review its receipt instead of paying again.");
+      } else {
+        setUncertain(true);
+        setNotice("A submission already exists for this draft in this app session. Check the original transaction before another attempt.");
+      }
+    }
+  }, [key, paymentDraft.id, onIdentity, onTransferSettled]);
 
   async function balances(address: string) {
     const [nextAusd, nextMon] = await Promise.all([client.ausdBalance(address), client.nativeBalance(address)]);
@@ -79,13 +97,17 @@ export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentit
       decimals: runtimeConfig.ausdDecimals, maximum });
   }
   async function connect(create: boolean) {
-    if (transfer || uncertain) return;
+    if (transfer || uncertain || attemptedDrafts.has(paymentDraft.id)) return;
     const requestKey = key;
     await work("passkey", async () => {
       const address = validatedRecipient();
       session.current?.end("replaced"); session.current = null; setReview(null);
       const live = await (create ? createMeraLiveAccount() : recoverMeraLiveAccount());
-      if (!mounted.current || currentKey.current !== requestKey) { live.end(); return; }
+      if (!mounted.current || currentKey.current !== requestKey || AppState.currentState === "background") {
+        live.end();
+        if (mounted.current) setNotice("Return to the payment screen and use your passkey again. Nothing was sent.");
+        return;
+      }
       try {
         const scope = createPaymentSessionScope({ chainId: runtimeConfig.chainId, asset: runtimeConfig.ausdAddress,
           recipient: address, assetDecimals: runtimeConfig.ausdDecimals, nowMs: Date.now(), reference: keccak256(toBytes(key)) });
@@ -98,34 +120,40 @@ export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentit
   function reviewPayment() {
     setError("");
     try {
-      if (!session.current?.status().active || transfer || uncertain) throw new Error("A fresh passkey authorisation is required. Do not repeat a submitted payment.");
+      if (!session.current?.status().active || transfer || uncertain || attemptedDrafts.has(paymentDraft.id)) {
+        throw new Error("A fresh passkey authorisation is required. Do not repeat a submitted payment.");
+      }
       const next = makeReview();
       if (!ausd || ausd.raw < next.amount || !mon || mon.raw <= 0n) throw new Error("Check your test AUSD and MON balances before continuing.");
       setReview(next);
     } catch (cause) { setError(describeMeraError(cause)); }
   }
   async function confirmPayment() {
-    if (!review || transfer || uncertain || lock.current) return;
+    if (!review || transfer || uncertain || lock.current || attemptedDrafts.has(paymentDraft.id)) return;
     const approved = review;
+    const draftId = paymentDraft.id;
     await work("send", async () => {
       const active = session.current;
       if (!active?.status().active || !sameReview(approved, makeReview())) {
         setReview(null); throw new Error("Authorisation or payment details changed. Please review the payment again.");
       }
-      // Submission errors can be ambiguous. Never offer a blind retry that could pay twice.
+      // Record uncertainty before invoking the existing submission path. A rerender
+      // or choosing this draft again must not offer another send in this JS session.
+      attemptedDrafts.set(draftId, { key: approved.draftKey, identity: active.identity, transfer: null });
       try {
         const result = await active.sendAusdTransfer(runtimeConfig, { chainId: approved.chainId,
           asset: runtimeConfig.ausdAddress, recipient: approved.recipient, amount: approved.amount, reference: approved.reference });
-        if (!mounted.current) return;
+        attemptedDrafts.set(draftId, { key: approved.draftKey, identity: active.identity, transfer: result });
+        if (!mounted.current || currentKey.current !== approved.draftKey) return;
         setTransfer(result); setReview(null); onTransferSettled(result);
         setNotice("Your transfer is confirmed. Business verification continues separately; do not send it again.");
-      } catch (cause) {
+      } catch {
         setUncertain(true); setReview(null);
-        throw new Error("We could not establish the payment outcome. Do not send again. Check the sender's transaction history or contact support. " + describeMeraError(cause));
+        throw new Error("We could not establish the payment outcome. Do not send again. Check the sender's transaction history or contact support.");
       }
       // A balance-refresh failure must never turn an already-confirmed payment into a failed payment.
       try { await balances(active.identity.address); }
-      catch { setNotice("Transfer confirmed. The balance refresh is unavailable; your receipt remains valid as an on-chain observation."); }
+      catch { setNotice("Transfer confirmed. The balance refresh is unavailable; your on-chain receipt is still shown below."); }
     });
   }
   async function fund() {
@@ -144,7 +172,9 @@ export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentit
       const active = session.current;
       if (!active?.status().active) throw new Error("The reference could not be retried because the passkey session expired. Your transfer is already confirmed; do not resend it.");
       const correlation = await active.retrySettlementCorrelation(runtimeConfig, transfer);
-      const next = Object.freeze({ ...transfer, correlation }); setTransfer(next); onTransferSettled(next);
+      const next = Object.freeze({ ...transfer, correlation });
+      attemptedDrafts.set(paymentDraft.id, { key, identity: active.identity, transfer: next });
+      setTransfer(next); onTransferSettled(next);
     });
   }
   const authorised = expires > 0;
@@ -156,7 +186,6 @@ export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentit
     <Text accessibilityRole="header" style={ui.heading}>{review ? "Review before you send" : transfer ? "Transfer completed" : "Pay " + paymentDraft.payee}</Text>
     <Detail label="Amount" value={amount + " AUSD"} />
     <Detail label="Reference" value={paymentDraft.reference || paymentDraft.id} />
-
     {review ? <View style={{ gap: 16 }}>
       <Detail label="To" value={review.recipient} selectable />
       <Detail label="Network" value="Monad Testnet · chain 10143" />
@@ -186,20 +215,19 @@ export function SupplierPaymentComposer({ runtimeConfig, paymentDraft, onIdentit
       </>}
       {identity ? <Disclosure title="Test funding and wallet details" defaultOpen={authorised && (!ausd || ausd.raw === 0n || !mon || mon.raw === 0n)}>
         <Text selectable style={ui.mono}>{identity.address}</Text>
-        <Notice warning>The preview currently requires test MON for network fees. Gas sponsorship is not being claimed.</Notice>
+        <Notice warning>The preview currently requires test MON for network fees. Gas sponsorship is not yet available.</Notice>
         <Action secondary label="Refresh balances" disabled={busy} loading={pending === "refresh"} onPress={() => void work("refresh", () => balances(identity.address))} />
         <Action secondary label="Get test AUSD" disabled={busy || !authorised || !mon || mon.raw === 0n} loading={pending === "fund"} onPress={() => void fund()} />
         {faucetHash ? <Text selectable style={ui.mono}>Faucet transaction: {faucetHash}</Text> : null}
       </Disclosure> : null}
     </View> : null}
-
-    {transfer ? <Notice>The transfer is confirmed. Use the receipt below. Further payment submission is locked for this draft in this session.</Notice> : null}
+    {transfer ? <Notice>The transfer is confirmed. Use the receipt below. Further payment submission is locked for this draft in this app session.</Notice> : null}
     {transfer && transfer.correlation.status !== "confirmed" ? <>
       <Notice warning>Your transfer succeeded, but its business reference needs attention. Do not repeat the transfer.</Notice>
       <Action secondary label="Retry reference only — not the payment" disabled={busy || !authorised} loading={pending === "reference"} onPress={() => void correlate()} />
     </> : null}
     {uncertain && identity ? <>
-      <Notice warning>Payment outcome uncertain. Sending is locked in this session to reduce duplicate-payment risk. Check this wallet's activity before any further attempt.</Notice>
+      <Notice warning>A submission needs review. Sending is locked in this app session to reduce duplicate-payment risk. Check this wallet's activity before any further attempt.</Notice>
       <Text selectable style={ui.mono}>{identity.address}</Text>
       <Action secondary label="Open sender transaction history" onPress={() => void Linking.openURL("https://testnet.monadscan.com/address/" + identity.address).catch(() => setError("The explorer could not be opened. Copy the address above."))} />
     </> : null}

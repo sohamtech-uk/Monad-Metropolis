@@ -26,6 +26,7 @@ import { MeraSessionCard } from "./src/MeraSessionCard";
 import { MeraBusinessVaultCard } from "./src/MeraBusinessVaultCard";
 import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
 import { JudgeReadinessCard } from "./src/JudgeReadinessCard";
+import { LiveHyperSyncCard } from "./src/envio/LiveHyperSyncCard";
 
 type StepNumber = 1 | 2 | 3 | 4;
 
@@ -36,7 +37,7 @@ const STEPS: ReadonlyArray<{ step: StepNumber; label: string }> = [
   { step: 4, label: "Final verification" },
 ];
 
-export default function App() {
+export default function App({ active = true }: { active?: boolean }) {
   const journeyStartedAtMs = useRef(Date.now()).current;
   const [currentStep, setCurrentStep] = useState<StepNumber>(1);
 
@@ -257,6 +258,14 @@ export default function App() {
             }}
           />
 
+          <LiveHyperSyncCard
+            active={active && currentStep === 3}
+            wallet={meraIdentity?.address ?? ""}
+            focus={lastTransfer}
+            indexEndpoint={envioEndpoint}
+            onIndexed={setEnvioIndexedCurrentPayment}
+          />
+
           <MeraBusinessVaultCard
             accountCredentialId={meraIdentity?.credentialId ?? null}
           />
@@ -266,7 +275,6 @@ export default function App() {
             explorerUrl={client.config.explorerUrl}
             assetDecimals={client.config.ausdDecimals}
             focusPaymentTxHash={lastTransfer?.hash ?? null}
-            onFocusIndexed={setEnvioIndexedCurrentPayment}
           />
 
           <View style={styles.card}>

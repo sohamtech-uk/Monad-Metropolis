@@ -20,6 +20,7 @@ import {
   recoverMeraLiveAccount,
   type MeraLiveAccount,
 } from "../mera/account";
+import { AURORA_INTENTS_ENABLED } from "./config";
 import {
   createCherryAuroraRunner,
   monadMainnetTransactionUrl,
@@ -73,6 +74,11 @@ export function AuroraIntentsCard() {
   }
 
   async function connect(create: boolean) {
+    if (!AURORA_INTENTS_ENABLED) {
+      setError("Aurora Intents is disabled until the Cherry Money proxy and API key are configured.");
+      return;
+    }
+
     setBusy(true);
     setError("");
     resetRoute();
@@ -253,9 +259,9 @@ export function AuroraIntentsCard() {
         </Text>
         <View style={styles.warning}>
           <Text style={styles.warningText}>
-            Experimental hackathon route · real Base and Monad mainnet USDC.
-            Maximum 100 USDC. The existing Agora AUSD testnet reconciliation
-            demo remains separate.
+            {AURORA_INTENTS_ENABLED
+              ? "Experimental hackathon route · real Base and Monad mainnet USDC. Maximum 100 USDC. The existing Agora AUSD testnet reconciliation demo remains separate."
+              : "Aurora Intents is installed but disabled. Enable it only after the Cherry Money proxy has its deployment API key. No funds can move while disabled."}
           </Text>
         </View>
       </View>
@@ -272,13 +278,13 @@ export function AuroraIntentsCard() {
         <View style={styles.actions}>
           <Button
             label="Use existing passkey"
-            disabled={busy}
+            disabled={busy || !AURORA_INTENTS_ENABLED}
             onPress={() => void connect(false)}
           />
           <Button
             label="Create passkey"
             secondary
-            disabled={busy}
+            disabled={busy || !AURORA_INTENTS_ENABLED}
             onPress={() => void connect(true)}
           />
         </View>

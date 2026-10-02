@@ -11,8 +11,9 @@ import {
 import SupplierApp from "./App";
 import { AuroraIntentsCard } from "./src/aurora/AuroraIntentsCard";
 import { ConsumerPayments } from "./src/consumer/ConsumerPayments";
+import { EnvioLiveScreen } from "./src/envio/LiveHyperSyncCard";
 
-type Surface = "supplier" | "aurora" | "consumer";
+type Surface = "supplier" | "aurora" | "consumer" | "envio";
 
 /** Keep the original supplier app mounted, preserving its working payment state. */
 export default function ConsumerApp() {
@@ -36,10 +37,15 @@ export default function ConsumerApp() {
           label="Earnings · Rewards · Gifts"
           onPress={() => setSurface("consumer")}
         />
+        <Tab
+          active={surface === "envio"}
+          label="Envio Live"
+          onPress={() => setSurface("envio")}
+        />
       </View>
 
       <View style={surface === "supplier" ? styles.pane : styles.hidden}>
-        <SupplierApp />
+        <SupplierApp active={surface === "supplier"} />
       </View>
 
       <View style={surface === "aurora" ? styles.pane : styles.hidden}>
@@ -52,6 +58,10 @@ export default function ConsumerApp() {
         <ScrollView contentContainerStyle={styles.content}>
           <ConsumerPayments />
         </ScrollView>
+      </View>
+
+      <View style={surface === "envio" ? styles.pane : styles.hidden}>
+        <EnvioLiveScreen active={surface === "envio"} />
       </View>
     </SafeAreaView>
   );

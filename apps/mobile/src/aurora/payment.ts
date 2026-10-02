@@ -145,7 +145,7 @@ export function createCherryAuroraRunner(
   return createExecutionRunner({
     api: createCherryAuroraApi(),
     wallet: createMeraAuroraWalletConnector(live),
-    onEvent,
+    ...(onEvent ? { onEvent } : {}),
     pollIntervalMs: 3_000,
     maxPollAttempts: 240,
   });

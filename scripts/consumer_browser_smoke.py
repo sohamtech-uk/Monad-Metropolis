@@ -61,12 +61,13 @@ with sync_playwright() as playwright:
         expect(button('Preview Aurora route')).to_be_disabled()
         tab('Home').click()
         button('Pay a supplier').click()
-        expect(page.get_by_text('Pay a supplier', exact=True)).to_be_visible()
+        # Retained offscreen tabs deliberately contain similarly named headings.
+        # Role locators exclude those hidden screens from the accessibility tree.
+        expect(page.get_by_role('heading', name='Pay a supplier', exact=True)).to_be_visible()
         expect(page.get_by_text('Network check unavailable', exact=True)).to_be_visible()
         expect(button('Continue to review & pay')).to_be_disabled()
         expect(button('Retry network check')).to_be_enabled()
         page.screenshot(path=str(out / 'supplier-network-error-desktop.png'))
-        # Offline conditions must not bypass network, draft or payment gates.
         expect(button('Step 2: Review & pay')).to_be_disabled()
         expect(button('Step 3: Business checks')).to_be_disabled()
         tab('More').click()

@@ -1,4 +1,5 @@
 import type {
+  Eip1193Provider,
   MakeTransferArgs,
   WalletConnector,
 } from "@aurora-is-near/intents-connect";
@@ -9,7 +10,6 @@ import {
   getAddress,
   http,
   parseAbi,
-  type EIP1193RequestFn,
 } from "viem";
 import { base } from "viem/chains";
 
@@ -24,13 +24,9 @@ const ERC20_TRANSFER_ABI = parseAbi([
   "function transfer(address to, uint256 amount) returns (bool)",
 ]);
 
-type MeraEip1193Provider = Readonly<{
-  request: EIP1193RequestFn;
-}>;
-
 function createMeraEip1193Provider(
   live: MeraLiveAccount,
-): MeraEip1193Provider {
+): Eip1193Provider {
   const address = getAddress(live.account.address);
 
   return Object.freeze({

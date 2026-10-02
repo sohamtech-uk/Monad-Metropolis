@@ -13,6 +13,9 @@ const config = {
 const fees = { maxFeePerGas: 182400000000n, maxPriorityFeePerGas: 2000000000n };
 const gas = 113465n;
 const required = 20696016000000000n;
+const checkedFields = { gas, ...fees, type: 'eip1559', gasPrice: undefined,
+  blobs: undefined, blobVersionedHashes: undefined, maxFeePerBlobGas: undefined,
+  kzg: undefined, authorizationList: undefined };
 
 test('the submitted faucet transaction needs 0.020696016 MON at its fee cap', () => {
   assert.equal(gas * fees.maxFeePerGas, required);
@@ -31,7 +34,7 @@ test('zero and one-wei-short balances fail; the exact maximum budget passes', ()
     assert.throws(() => requireGasBudget(balance, gas, fees, 'send AUSD', payer), /Not enough MON/);
   }
   const checked = requireGasBudget(required, gas, fees, 'send AUSD', payer);
-  assert.deepEqual(checked, { gas, ...fees });
+  assert.deepEqual(checked, checkedFields);
   assert.equal(Object.isFrozen(checked), true);
 });
 
@@ -67,7 +70,7 @@ test('MON formatting keeps all precision and avoids floating-point rounding', ()
   assert.throws(() => formatMon(-1n));
 });
 
-test('read-only preflight returns exactly the checked fee parameters', async () => {
+test('read-only preflight returns exactly the checked type-2 fee parameters', async () => {
   const calls = [];
   const checked = await checkContractGas({
     estimateGas: async () => { calls.push('gas'); return gas; },
@@ -75,8 +78,12 @@ test('read-only preflight returns exactly the checked fee parameters', async () 
     getBalance: async () => { calls.push('balance'); return required; },
     action: 'send AUSD', payer,
   });
-  assert.deepEqual(checked, { gas, ...fees });
+  assert.deepEqual(checked, checkedFields);
   assert.deepEqual(calls, ['gas', 'fees', 'balance']);
+  const write = { type: 'legacy', gasPrice: 1n, authorizationList: [{ address: recipient }], ...checked };
+  assert.equal(write.type, 'eip1559');
+  assert.equal(write.gasPrice, undefined);
+  assert.equal(write.authorizationList, undefined);
 });
 
 test('insufficient balance prevents a later sign/send callback being reached', async () => {

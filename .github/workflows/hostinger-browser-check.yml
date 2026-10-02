@@ -2,7 +2,7 @@ name: Hostinger browser smoke check
 
 on:
   push:
-    branches: [ops/hostinger-upload-20261001]
+    branches: [ops/hostinger-webmcp-auth-20261002]
     paths: [.github/workflows/hostinger-browser-check.yml]
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
           ready=false
           for attempt in $(seq 1 30); do
             gh api 'repos/sohamtech-uk/Monad-Metropolis/contents/deploy-runtime/status.json?ref=ops%2Fhostinger-upload-20261001' --jq .content | base64 -d > "${RUNNER_TEMP}/deployment-status.json"
-            if jq -e '.stage == "deployed" and .source_commit == "cc3ab12de6dca0c419e764015032484664bc856c"' "${RUNNER_TEMP}/deployment-status.json" >/dev/null; then
+            if jq -e '.stage == "deployed" and .source_commit == "3433bf9458c17ccbd466147e0b81af534275b4f6"' "${RUNNER_TEMP}/deployment-status.json" >/dev/null; then
               ready=true
               break
             fi
@@ -58,7 +58,11 @@ jobs:
           assert 'Failed to fetch' not in text, 'A browser network request failed'
           assert 'Envio GraphQL request failed' not in text, 'Envio request failed'
           assert 'Connected' in text, 'Monad connection was not established'
+          assert 'Continue with Google' in text, 'WebMCP Google sign-in control did not render'
+          assert 'Temporary API token (advanced fallback)' in text, 'Manual-token fallback label did not render'
+          assert 'Your session is not signed in for this page or action.' not in text, 'Stale authentication error rendered on fresh load'
           print('LIVE_BROWSER_RENDER: PASS')
+          print('WEBMCP_GOOGLE_SIGNIN_UI: PASS')
           print('BROWSER_API_COMPATIBILITY: PASS')
           print('No credentials entered, passkeys created, or payments submitted.')
           print(text[-10000:])

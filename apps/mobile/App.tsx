@@ -1,16 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { keccak256, toBytes } from "viem";
 import type { CherryMoneyPaymentDraft } from "@cherry-metropolis/cherry-money-client";
 import { createMonadRuntimeConfig, MonadReadClient, type MonadStatus } from "@cherry-metropolis/core";
 import type { MeraAccountIdentity } from "./src/mera/account";
 import type { AusdTransferResult } from "./src/mera/scopedSession";
+import { progressForReference, subscribeTransferProgress } from "./src/mera/transferProgress";
 import { CherryMoneyDraftCard } from "./src/CherryMoneyDraftCard";
 import { MeraBusinessVaultCard } from "./src/MeraBusinessVaultCard";
 import { SettlementAnalyticsCard } from "./src/SettlementAnalyticsCard";
 import { JudgeReadinessCard } from "./src/JudgeReadinessCard";
-import { LiveHyperSyncCard } from "./src/envio/LiveHyperSyncCard";
+import { TransactionLiveCard } from "./src/envio/TransactionLiveCard";
 import { SupplierPaymentComposer } from "./src/experience/SupplierPaymentComposer";
-import { receiptFor, supportedDraft, type PaymentReceipt } from "./src/experience/model";
+import { draftKey, receiptFor, supportedDraft, type PaymentReceipt } from "./src/experience/model";
 import { Action, Badge, Detail, Disclosure, Notice, ReceiptCard, palette, ui } from "./src/experience/ui";
 
 type Step = 1 | 2 | 3;
@@ -29,6 +31,16 @@ export default function App({ active = true, onReceipt = noop, onBusyChange = no
   const [identity, setIdentity] = useState<MeraAccountIdentity | null>(null);
   const [transfer, setTransfer] = useState<AusdTransferResult | null>(null);
   const [indexed, setIndexed] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+  const paymentReference = paymentDraft ? keccak256(toBytes(draftKey(paymentDraft))) : null;
+  const broadcast = useSyncExternalStore(subscribeTransferProgress,
+    () => progressForReference(paymentReference), () => null);
+  const progress = useMemo(() => broadcast && transfer?.hash === broadcast.hash ? { ...broadcast,
+    correlation: { status: transfer.correlation.status, blockNumber: transfer.correlation.correlationBlockNumber,
+      hash: transfer.correlation.correlationTxHash } } : broadcast, [broadcast, transfer]);
+  useEffect(() => {
+    if (progress?.hash) scroll.current?.scrollTo({ y: 0, animated: false });
+  }, [progress?.hash]);
   const client = useMemo(() => new MonadReadClient(createMonadRuntimeConfig({
     rpcUrl: process.env.EXPO_PUBLIC_MONAD_RPC_URL, chainId: process.env.EXPO_PUBLIC_MONAD_CHAIN_ID,
     explorerUrl: process.env.EXPO_PUBLIC_MONAD_EXPLORER_URL, ausdAddress: process.env.EXPO_PUBLIC_AUSD_ADDRESS,
@@ -56,7 +68,7 @@ export default function App({ active = true, onReceipt = noop, onBusyChange = no
     if (busy || (target === 2 && !canPay) || (target === 3 && !canCheck)) return;
     setStep(target);
   }
-  return <ScrollView contentContainerStyle={ui.page} keyboardShouldPersistTaps="handled">
+  return <ScrollView ref={scroll} contentContainerStyle={ui.page} keyboardShouldPersistTaps="handled">
     <View style={ui.row}><Badge tone="warning">Supplier preview · testnet</Badge><Badge>Cherry Money connected workflow</Badge></View>
     <Text accessibilityRole="header" style={ui.title}>Pay a supplier</Text>
     <Text style={ui.body}>Choose the business payment, approve its recipient and review before sending. Track confirmation without losing the reference.</Text>
@@ -70,6 +82,10 @@ export default function App({ active = true, onReceipt = noop, onBusyChange = no
         <Text style={[styles.stepText, step === item.step && { color: "#FFFFFF" }]}>{item.label}</Text>
       </Pressable>)}
     </View>
+    {progress ? <View style={step > 1 ? styles.stack : ui.hidden} accessibilityElementsHidden={step === 1} importantForAccessibility={step > 1 ? "auto" : "no-hide-descendants"}>
+      <TransactionLiveCard key={progress.hash} progress={progress} active={active && step > 1}
+        indexEndpoint={envioEndpoint} onIndexed={setIndexed} />
+    </View> : null}
     <View style={step === 1 ? styles.stack : ui.hidden} accessibilityElementsHidden={step !== 1} importantForAccessibility={step === 1 ? "auto" : "no-hide-descendants"}>
       <View style={ui.card}>
         <View style={ui.row}>{!status && !statusError ? <ActivityIndicator color={palette.cherry} /> : null}
@@ -108,10 +124,6 @@ export default function App({ active = true, onReceipt = noop, onBusyChange = no
       <Action secondary label="Back to payment receipt" onPress={() => go(2)} />
     </View>
     <View style={transfer && step > 1 ? styles.stack : ui.hidden} accessibilityElementsHidden={!transfer || step === 1} importantForAccessibility={transfer && step > 1 ? "auto" : "no-hide-descendants"}>
-      <Disclosure title="Live payment evidence · Envio" keepMounted>
-        <LiveHyperSyncCard active={active && step > 1 && transfer !== null} wallet={identity?.address ?? ""}
-          focus={transfer} indexEndpoint={envioEndpoint} onIndexed={setIndexed} />
-      </Disclosure>
       <Disclosure title="Settlement analytics & passkey evidence">
         <SettlementAnalyticsCard endpoint={envioEndpoint} explorerUrl={client.config.explorerUrl}
           assetDecimals={client.config.ausdDecimals} focusPaymentTxHash={transfer?.hash ?? null} />

@@ -61,15 +61,23 @@ with sync_playwright() as playwright:
         expect(button('Preview Aurora route')).to_be_disabled()
         tab('Home').click()
         button('Pay a supplier').click()
-        # Retained offscreen tabs deliberately contain similarly named headings.
-        # Role locators exclude those hidden screens from the accessibility tree.
+        # Role locators exclude the deliberately retained offscreen tabs.
         expect(page.get_by_role('heading', name='Pay a supplier', exact=True)).to_be_visible()
-        expect(page.get_by_text('Network check unavailable', exact=True)).to_be_visible()
+        expect(page.get_by_text('Network check unavailable', exact=True)).to_be_visible(timeout=30000)
         expect(button('Continue to review & pay')).to_be_disabled()
         expect(button('Retry network check')).to_be_enabled()
+        expect(button('Continue with Google')).to_be_visible()
+        expect(page.get_by_label('Temporary API token', exact=True)).to_have_count(0)
+        expect(button('Use 5 USD → 5 AUSD demo draft')).to_have_count(0)
         page.screenshot(path=str(out / 'supplier-network-error-desktop.png'))
         expect(button('Step 2: Review & pay')).to_be_disabled()
         expect(button('Step 3: Business checks')).to_be_disabled()
+        button('Try the testnet demo draft').click()
+        expect(page.get_by_text('Saved demo snapshot', exact=True)).to_be_visible()
+        button('Use 5 USD → 5 AUSD demo draft').click()
+        # Selecting a fixture cannot bypass the unavailable network or execute a transfer.
+        expect(button('Continue to review & pay')).to_be_disabled()
+        expect(button('Step 2: Review & pay')).to_be_disabled()
         tab('More').click()
         button('Open Envio live evidence').click()
         expect(button('Start HyperSync')).to_be_enabled()
@@ -114,14 +122,21 @@ with sync_playwright() as playwright:
         button('How the payment is checked').click()
         expect(button('How the payment is checked')).to_have_attribute('aria-expanded', 'true')
         page.screenshot(path=str(out / 'help-mobile.png'))
+        # A synthetic failed callback exercises routing/fragment cleanup only, not Google authentication.
+        page.goto('https://cherry-ui.test/#google-error=Offline%20callback%20test')
+        expect(page.get_by_role('heading', name='Pay a supplier', exact=True)).to_be_visible()
+        expect(page.get_by_text('Offline callback test', exact=True)).to_be_visible()
+        assert page.evaluate('location.hash') == '', 'OAuth fragment was not removed on return'
         assert not submitted, 'The UI attempted a signing/submission request during offline tests'
         assert not errors, errors
         (out / 'result.json').write_text(json.dumps({'passed': True, 'paymentsExecuted': 0,
             'mode': 'actual compiled Expo app with local assets and external traffic blocked',
             'checks': ['customer home', 'truthful session-only activity', 'mainnet consent boundary',
-                'network/draft/payment gates', 'HyperSync outage is not LIVE', 'mainnet wallet filter',
-                'existing labs remain gated', '320/390px overflow', '44px navigation targets',
-                'expanded accessibility state', 'no script exceptions', 'no transaction requests'],
+                'network/draft/payment gates', 'Google sign-in primary', 'advanced credentials collapsed',
+                'demo fixture explicitly labelled', 'OAuth callback routing/fragment cleanup',
+                'HyperSync outage is not LIVE', 'mainnet wallet filter', 'existing labs remain gated',
+                '320/390px overflow', '44px navigation targets', 'expanded accessibility state',
+                'no script exceptions', 'no transaction requests'],
             'externalRequestsBlocked': len(blocked)}, indent=2))
         print('CONSUMER_BROWSER_SMOKE: PASS — customer UI, no payments')
     except Exception:

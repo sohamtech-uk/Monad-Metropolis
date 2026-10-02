@@ -15,7 +15,7 @@ const gas = 113465n;
 const required = 20696016000000000n;
 const checkedFields = { gas, ...fees, type: 'eip1559', gasPrice: undefined,
   blobs: undefined, blobVersionedHashes: undefined, maxFeePerBlobGas: undefined,
-  kzg: undefined, authorizationList: undefined };
+  kzg: undefined, sidecars: undefined, authorizationList: undefined };
 
 test('the submitted faucet transaction needs 0.020696016 MON at its fee cap', () => {
   assert.equal(gas * fees.maxFeePerGas, required);
@@ -80,9 +80,10 @@ test('read-only preflight returns exactly the checked type-2 fee parameters', as
   });
   assert.deepEqual(checked, checkedFields);
   assert.deepEqual(calls, ['gas', 'fees', 'balance']);
-  const write = { type: 'legacy', gasPrice: 1n, authorizationList: [{ address: recipient }], ...checked };
+  const write = { type: 'legacy', gasPrice: 1n, sidecars: ['not-a-type-2-field'], authorizationList: [{ address: recipient }], ...checked };
   assert.equal(write.type, 'eip1559');
   assert.equal(write.gasPrice, undefined);
+  assert.equal(write.sidecars, undefined);
   assert.equal(write.authorizationList, undefined);
 });
 

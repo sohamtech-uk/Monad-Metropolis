@@ -11,7 +11,9 @@ import type { MeraLiveAccount } from "../mera/account";
 import {
   AURORA_INTENTS_API_BASE_URL,
   AURORA_INTENTS_PROXY_URL,
+  BASE_USDC_ASSET_ID,
   MONAD_MAINNET_EXPLORER_URL,
+  MONAD_USDC_ASSET_ID,
   USDC_DECIMALS,
 } from "./config";
 import { createMeraAuroraWalletConnector } from "./meraConnector";
@@ -64,7 +66,26 @@ export async function previewAuroraPayment(
   live: MeraLiveAccount,
   input: AuroraPaymentPlanInput,
 ): Promise<AuroraPaymentPreview> {
-  const runner = createCherryAuroraRunner(live);
+  const api = createCherryAuroraApi();
+  const supported = await api.listSupportedTokens();
+
+  const baseUsdcSupported =
+    supported.in?.some((token) => token.assetId === BASE_USDC_ASSET_ID) === true;
+  const monadUsdcSupported =
+    supported.out?.some((token) => token.assetId === MONAD_USDC_ASSET_ID) === true;
+
+  if (!baseUsdcSupported || !monadUsdcSupported) {
+    throw new Error(
+      "Aurora does not currently advertise the Base USDC → Monad USDC route. Try again later rather than sending funds to a stale route.",
+    );
+  }
+
+  const runner = createExecutionRunner({
+    api,
+    wallet: createMeraAuroraWalletConnector(live),
+    pollIntervalMs: 3_000,
+    maxPollAttempts: 240,
+  });
 
   try {
     const prepared = await runner.preview(

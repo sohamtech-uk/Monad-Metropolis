@@ -5,7 +5,7 @@ import {
   CHERRY_PAY_MONAD_USDC_RECIPE,
   buildBaseUsdcToMonadPaymentPlan,
   parseAuroraUsdcAmount,
-} from "../apps/mobile/src/aurora/payment.ts";
+} from "../apps/mobile/src/aurora/plan.ts";
 import {
   BASE_CHAIN_ID,
   BASE_USDC_ADDRESS,

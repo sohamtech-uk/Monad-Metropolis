@@ -1,13 +1,25 @@
 {
-  "stage": "awaiting_encrypted_credential",
+  "stage": "uploading",
   "run_id": "37018825701",
   "branch": "ops/hostinger-webmcp-auth-20261002",
   "site": "https://metropolis.cherrymoney.co.uk",
-  "time_utc": "2026-10-02T14:17:36Z",
+  "time_utc": "2026-10-02T14:18:27Z",
   "tls_hostname": "hstgr.io",
-  "certificate_sha256": "79a7c9aeaad8855c82f58598597b931b10429afec6234b621588f4e937b36dee",
-  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAtsvHoZMy7IakeXC05q3D\nKJgzVjPHNBLH11jX7J+W/9uR/IJOHjs483qXWdLjkgZOFUHN0jki/7iuZgC007UG\nYgF967I1I6+eh4RBhivvR8B0fzfVs91Cp+xqiy55Na7Nc/rKnNg0heHlerm/6/Lx\nz2EEoIrpCCqDx0uqEUTZwfMICqo68iQ9FGFKmT8NFCpDCLTIipmkLtJCiXItvsOy\nV9VXmRMiKEg6bjGCfEXCM2+TLcXatCkuL4ijcGYRHO5oqCJBpInopW4ItsqNw9j/\npjsz+zg17oRP/IzF4a1FzKF5GHYkViqiArFQUY5cPwuXAQDUj4l222O7zRxnzBKe\na/TEZ6jGQp0lGK8sPWDe+OVpN4OgLUPkAx36TzEKJS6HUUF0slEdidpZ/LJ3BtX6\njtnFWs4NWD2o/ChDmhweymDELY3ai7NqNv+l0Vt5COxnU4ln1NcjQxL0DLyP5k8P\nmQ3SDkKMrTimTA65Mjpnd7IcdkGcg/UNOhAaY+m44YQhAgMBAAE=\n-----END PUBLIC KEY-----\n",
-  "credential_path": "deploy-runtime/credentials-37018825701.json",
   "source_run_id": 37018216013,
-  "source_commit": "3433bf9458c17ccbd466147e0b81af534275b4f6"
+  "source_commit": "3433bf9458c17ccbd466147e0b81af534275b4f6",
+  "files": [
+    "_expo/static/js/web/empty-module-4626a65396dad505b09aba098ccbd49c.js",
+    "_expo/static/js/web/index-0a16a4e5512c3c483b8bcd27759ff383.js",
+    "_expo/static/js/web/mine-a5ba37e716ef56d77da473aa7bf79135.js",
+    "_expo/static/js/web/native-92ab1626a3b1fe3b95ec89de16efabcb.js",
+    "favicon.ico",
+    "metadata.json",
+    "index.html"
+  ],
+  "graphql_before": true,
+  "preserved": [
+    ".htaccess",
+    "graphql/",
+    ".well-known/"
+  ]
 }

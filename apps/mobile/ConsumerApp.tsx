@@ -15,14 +15,19 @@ const NAV = [{ key: "home", label: "Home", icon: "⌂" }, { key: "pay", label: "
 function navParent(surface: Surface) {
   return surface === "supplier" || surface === "aurora" ? "pay" : surface === "envio" || surface === "labs" ? "more" : surface;
 }
-
+function initialSurface(): Surface {
+  // Mount the existing one-time-code exchange immediately on an OAuth return.
+  // It removes the fragment before the network exchange; never store the code here.
+  const hash = typeof globalThis.location === "undefined" ? "" : globalThis.location.hash;
+  return hash.startsWith("#google-auth=") || hash.startsWith("#google-error=") ? "supplier" : "home";
+}
 export default function ConsumerApp() { return <SafeAreaProvider><ProductShell /></SafeAreaProvider>; }
 function ProductShell() {
   const { width } = useWindowDimensions();
   const wide = width >= 1000;
   const insets = useSafeAreaInsets();
-  const [surface, setSurface] = useState<Surface>("home");
-  const [visited, setVisited] = useState<Set<Surface>>(() => new Set(["home"]));
+  const [surface, setSurface] = useState<Surface>(initialSurface);
+  const [visited, setVisited] = useState<Set<Surface>>(() => new Set(["home", surface]));
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
   const [busy, setBusy] = useState(false);
   const [mainnetAccepted, setMainnetAccepted] = useState(false);
@@ -34,8 +39,7 @@ function ProductShell() {
   }, []);
   function go(next: Surface) {
     if (busy) return;
-    setVisited((current) => new Set([...current, next]));
-    setSurface(next);
+    setVisited((current) => new Set([...current, next])); setSurface(next);
   }
   function nav(vertical: boolean) {
     return <View accessibilityRole="tablist" style={vertical ? styles.sideNav : styles.bottomNav}>
@@ -57,8 +61,7 @@ function ProductShell() {
       <View style={styles.brand}>
         <Image source={require("./assets/icon.png")} accessibilityLabel="Cherry Pay" style={styles.logo} resizeMode="contain" />
         <View><Text style={styles.brandName}>Cherry Pay</Text><Text style={styles.brandSub}>GLOBAL</Text></View>
-      </View>
-      <Badge tone="warning">Preview</Badge>
+      </View><Badge tone="warning">Preview</Badge>
     </View>
     <View style={styles.layout}>
       {wide ? <View style={styles.sidebar}>{nav(true)}
@@ -91,10 +94,8 @@ function ProductShell() {
           </View>
           <View style={ui.card}>
             <View style={styles.sectionHeading}><Text accessibilityRole="header" style={ui.heading}>Your payment activity</Text><Badge>This session</Badge></View>
-            {receipt ? <>
-              <Text style={ui.label}>{receipt.amount} AUSD → {receipt.payee}</Text><Text style={ui.body}>{receiptStage(receipt)}</Text>
-              <Action secondary label="View payment receipt" onPress={() => go("activity")} />
-            </> : <>
+            {receipt ? <><Text style={ui.label}>{receipt.amount} AUSD → {receipt.payee}</Text><Text style={ui.body}>{receiptStage(receipt)}</Text>
+              <Action secondary label="View payment receipt" onPress={() => go("activity")} /></> : <>
               <Text style={ui.body}>No confirmed supplier payment in this session yet.</Text>
               <Text style={ui.small}>Your receipt will appear here after confirmation. This is not a full wallet history or a balance statement.</Text>
             </>}
@@ -154,8 +155,7 @@ function ProductShell() {
           <Disclosure title="Experimental features · testnet only">
             <Text style={ui.body}>Explore testnet earnings, rewards and gifts in a separate workspace. On-chain actions remain subject to their feature controls.</Text>
             <Action secondary label="Open experimental features" onPress={() => go("labs")} />
-          </Disclosure>
-          <SupportCard />
+          </Disclosure><SupportCard />
         </ScrollView>)}
         {visited.has("envio") ? panel("envio", <EnvioLiveScreen active={surface === "envio"} />) : null}
         {visited.has("labs") ? panel("labs", <ScrollView contentContainerStyle={ui.page}>
@@ -169,8 +169,8 @@ function ProductShell() {
 function RouteCard({ title, tag, description, action, onPress, warning = false }: {
   title: string; tag: string; description: string; action: string; onPress: () => void; warning?: boolean;
 }) {
-  return <View style={[ui.card, styles.routeCard]}>
-    <Badge tone={warning ? "warning" : "neutral"}>{tag}</Badge><Text accessibilityRole="header" style={ui.heading}>{title}</Text>
+  return <View style={[ui.card, styles.routeCard]}><Badge tone={warning ? "warning" : "neutral"}>{tag}</Badge>
+    <Text accessibilityRole="header" style={ui.heading}>{title}</Text>
     <Text style={[ui.body, { flexGrow: 1 }]}>{description}</Text><Action secondary label={action} onPress={onPress} />
   </View>;
 }
@@ -179,8 +179,7 @@ function SupportCard() {
   return <View style={ui.card}><Text style={ui.heading}>Need a hand?</Text>
     <Text style={ui.body}>Contact Cherry Money with the public transaction or execution reference. Never include passwords, keys or tokens.</Text>
     <Action secondary label="Contact support" onPress={() => void Linking.openURL("mailto:info@cherrymoney.co.uk?subject=Cherry%20Pay%20preview%20support").catch(() => setError("Email info@cherrymoney.co.uk. An email app could not be opened."))} />
-    {error ? <Text style={ui.small}>{error}</Text> : null}
-    <Text style={ui.small}>Preview support · no response-time guarantee is implied.</Text>
+    {error ? <Text style={ui.small}>{error}</Text> : null}<Text style={ui.small}>Preview support · no response-time guarantee is implied.</Text>
   </View>;
 }
 const styles = StyleSheet.create({

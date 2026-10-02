@@ -209,7 +209,7 @@ async function exchangeCherryMoneyGoogleCode({
       currency: requiredString(payload.user.currency, "user.currency"),
       email: requiredString(payload.user.email, "user.email"),
       name: requiredString(payload.user.name, "user.name"),
-      companyId: requiredString(payload.user.company_id, "user.company_id"),
+      companyId: requiredIdentifier(payload.user.company_id, "user.company_id"),
     }),
   });
 }
@@ -329,6 +329,18 @@ function parsePaymentDraft(
     moneyMoved: false,
     source: "cherry-money-production",
   });
+}
+
+function requiredIdentifier(value: unknown, label: string): string {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return value.toString();
+  }
+
+  throw new Error("Cherry Money response is missing " + label + ".");
 }
 
 function requiredString(value: unknown, label: string): string {

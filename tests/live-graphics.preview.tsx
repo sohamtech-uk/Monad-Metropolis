@@ -1,5 +1,5 @@
 // Test-only browser entry. Built under build/live-graphics, never apps/mobile/dist.
-// The permanent banner must remain visible in screenshots. No payment is submitted.
+// Permanent fixture banner: screenshots/recordings are not evidence of a real payment.
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { TransactionLiveCard } from "../apps/mobile/src/envio/TransactionLiveCard";
@@ -12,9 +12,9 @@ const payment: TransferProgress = {
   submittedAtMs: Date.now() - 3000, receipt: null, correlation: null,
 };
 function Preview() {
-  return <div style={{ maxWidth: 900, margin: "0 auto", padding: 14, fontFamily: "Arial, sans-serif" }}>
-    <div role="note" style={{ background: "#FFF0C3", color: "#604300", padding: 16, borderRadius: 12,
-      fontWeight: 700, marginBottom: 14, position: "sticky", top: 0, zIndex: 10 }}>
+  return <div style={{ maxWidth: 1220, margin: "0 auto", padding: 14, fontFamily: "Arial, sans-serif" }}>
+    <div role="note" style={{ background: "#FFF0C3", color: "#604300", padding: 14, borderRadius: 10,
+      fontWeight: 700, fontSize: 12, lineHeight: "18px", marginBottom: 14, position: "sticky", top: 0, zIndex: 10 }}>
       OFFLINE UI TEST FIXTURE — NOT A LIVE PAYMENT. Values supplied by the browser test.
     </div>
     <TransactionLiveCard progress={payment} active indexEndpoint="https://index-fixture.test/graphql" onIndexed={() => undefined} />

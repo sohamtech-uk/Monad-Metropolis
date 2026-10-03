@@ -1,0 +1,44 @@
+name: Hostinger Nansen release prepared
+
+on:
+  push:
+    branches: [ops/hostinger-nansen-ready-to-run]
+    paths: [.github/workflows/hostinger-upload-nansen-once.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: hostinger-metropolis-nansen-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: '37120932666'
+      SOURCE_COMMIT: '35fe128dc6e51baef2394a3e2ca48d940b69638b'
+    steps:
+      - name: Check out deployment tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate exact successful main build
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" > "${RUNNER_TEMP}/source-run.json"
+          jq -e --arg sha "${SOURCE_COMMIT}" '.status == "completed" and .conclusion == "success" and .head_branch == "main" and .head_sha == $sha' "${RUNNER_TEMP}/source-run.json" >/dev/null
+          gh run download "${SOURCE_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name metropolis-web --dir "${RUNNER_TEMP}/web"
+          test -f "${RUNNER_TEMP}/web/index.html"
+          test -f "${RUNNER_TEMP}/web/.well-known/assetlinks.json"
+
+      - name: Check deployment tooling
+        run: python3 -m py_compile scripts/deploy-hostinger-once.py scripts/run_hostinger_upload.py
+
+      - name: Upload over hostname-verified FTPS and verify live website
+        run: python3 scripts/run_hostinger_upload.py

@@ -1,11 +1,25 @@
 {
-  "stage": "failed",
-  "run_id": "37122912113",
+  "stage": "uploading",
+  "run_id": "37161849060",
   "branch": "ops/hostinger-nansen-ready-to-run",
   "site": "https://metropolis.cherrymoney.co.uk",
-  "time_utc": "2026-10-03T12:34:28Z",
-  "error": "RuntimeError: Timed out awaiting the encrypted run credential; no upload attempted.",
-  "note": "Check workflow logs. Upload is rolled back when a post-upload check fails.",
-  "source_run_id": 37120932666,
-  "source_commit": "35fe128dc6e51baef2394a3e2ca48d940b69638b"
+  "time_utc": "2026-10-03T23:32:39Z",
+  "tls_hostname": "hstgr.io",
+  "source_run_id": 37121938865,
+  "source_commit": "707f743d0c2064de306e1e4139f0d6076e937a14",
+  "files": [
+    "_expo/static/js/web/empty-module-d9afb8fca0327dddec8062152c6383fb.js",
+    "_expo/static/js/web/index-eef84956e05f5d0f090829c4447ebedb.js",
+    "_expo/static/js/web/mine-40c58909c0dc33130d8f8835cd4e7a66.js",
+    "_expo/static/js/web/native-6148277622553dd7cb8e70838c25a98c.js",
+    "favicon.ico",
+    "metadata.json",
+    "index.html"
+  ],
+  "graphql_before": true,
+  "preserved": [
+    ".htaccess",
+    "graphql/",
+    ".well-known/"
+  ]
 }

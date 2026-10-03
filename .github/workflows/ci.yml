@@ -36,8 +36,8 @@ jobs:
         run: npm run aurora:test
       - name: Envio live observation tests
         run: npx --no-install tsx --test tests/envio-live.test.ts
-      - name: Customer payment review and live-graphics model tests
-        run: npx --no-install tsx --test tests/payment-experience.test.ts tests/transaction-live.test.ts tests/studio-geometry.test.ts
+      - name: Customer payment review, Nansen and live-graphics model tests
+        run: npx --no-install tsx --test tests/payment-experience.test.ts tests/nansen-payment-intelligence.test.ts tests/transaction-live.test.ts tests/studio-geometry.test.ts
       - name: Build Expo web app
         env:
           EXPO_PUBLIC_AURORA_INTENTS_ENABLED: "true"
@@ -45,6 +45,7 @@ jobs:
           EXPO_PUBLIC_AURORA_INTENTS_PROXY_URL: "https://cherrymoney.co.uk/api/aurora-intents/"
           EXPO_PUBLIC_AURORA_BASE_RPC_URL: "https://mainnet.base.org"
           EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL: "https://monadscan.com"
+          EXPO_PUBLIC_NANSEN_PROXY_URL: "https://cherrymoney.co.uk/api/nansen/payment-intelligence/"
         run: npm run web:build
       - name: Consumer browser smoke test (offline, no payments)
         run: |

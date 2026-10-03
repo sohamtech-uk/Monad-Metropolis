@@ -24,6 +24,7 @@ import {
 
 import type { MeraLiveAccount } from "./account";
 import { assertPaymentRecipient, checkContractGas } from "./transactionPreflight";
+import { publishTransferProgress, type TransferProgress } from "./transferProgress";
 
 type SessionEndReason =
   | "manual"
@@ -299,12 +300,26 @@ class ScopedMeraPaymentSession {
     const submittedAtMs = Date.now();
     const hash = await walletClient.writeContract({ ...simulation.request, ...gasBudget });
 
+    // The actual transaction hash is now known, before receipt/indexer waits.
+    // Only read-only public metadata is published; view failures are isolated.
+    let progress: TransferProgress = {
+      hash, chainId: config.chainId, asset: this.scope.asset, sender, recipient,
+      amount: request.amount, reference: request.reference, submittedAtMs,
+      receipt: null, correlation: null,
+    };
+    publishTransferProgress(progress);
+
     const receipt = await publicClient.waitForTransactionReceipt({
       hash,
       confirmations: 1,
       timeout: 60_000,
     });
     const confirmedAtMs = Date.now();
+    progress = { ...progress, receipt: {
+      blockNumber: receipt.blockNumber, blockHash: receipt.blockHash,
+      status: receipt.status, receivedAtMs: confirmedAtMs,
+    } };
+    publishTransferProgress(progress);
 
     if (receipt.status !== "success") {
       throw new Error("The AUSD transfer transaction reverted.");
@@ -330,6 +345,10 @@ class ScopedMeraPaymentSession {
       request,
       hash,
     );
+    publishTransferProgress({ ...progress, correlation: {
+      status: correlation.status, blockNumber: correlation.correlationBlockNumber,
+      hash: correlation.correlationTxHash,
+    } });
 
     this.recordUsage(request.amount);
 

@@ -54,7 +54,9 @@ jobs:
       - name: Live graphics component tests (explicit fixtures, not deployed)
         run: |
           mkdir -p build/live-graphics
-          npx --no-install esbuild tests/live-graphics.preview.tsx --bundle --platform=browser --jsx=automatic --alias:react-native=react-native-web --define:process.env='{}' --define:process.env.NODE_ENV='"production"' --outfile=build/live-graphics/index.js
+          # The isolated esbuild entry does not have Metro's module-level global.
+          # Supply that runtime alias so the real React Native Animated code runs.
+          npx --no-install esbuild tests/live-graphics.preview.tsx --bundle --platform=browser --jsx=automatic --alias:react-native=react-native-web --define:global=globalThis --define:process.env='{}' --define:process.env.NODE_ENV='"production"' --outfile=build/live-graphics/index.js
           "$RUNNER_TEMP/cherry-browser-venv/bin/python" scripts/live_graphics_browser.py
       - name: Upload web build
         uses: actions/upload-artifact@v4

@@ -13,6 +13,7 @@ import type {
   RunnerEvent,
 } from "@aurora-is-near/intents-connect";
 import { getAddress } from "viem";
+import { NansenRecipientIntelligence } from "../nansen/NansenRecipientIntelligence";
 
 import {
   createMeraLiveAccount,
@@ -302,6 +303,8 @@ export function AuroraIntentsCard() {
           disabled={busy}
           placeholder="0x…"
         />
+        <NansenRecipientIntelligence address={recipient} />
+
         <Field
           label="Pay from Base USDC"
           value={amount}

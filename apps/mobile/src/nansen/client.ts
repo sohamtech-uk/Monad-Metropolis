@@ -51,7 +51,7 @@ export async function loadNansenPaymentIntelligence(
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal,
+      ...(signal ? { signal } : {}),
     },
   );
 

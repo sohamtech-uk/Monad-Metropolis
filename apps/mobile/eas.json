@@ -24,7 +24,8 @@
         "EXPO_PUBLIC_AURORA_INTENTS_API_BASE_URL": "https://intents-connect-alpha-api.aurora.dev",
         "EXPO_PUBLIC_AURORA_INTENTS_PROXY_URL": "https://cherrymoney.co.uk/api/aurora-intents/",
         "EXPO_PUBLIC_AURORA_BASE_RPC_URL": "https://mainnet.base.org",
-        "EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL": "https://monadscan.com"
+        "EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL": "https://monadscan.com",
+        "EXPO_PUBLIC_NANSEN_PROXY_URL": "https://cherrymoney.co.uk/api/nansen/payment-intelligence/"
       }
     },
     "production": {
@@ -47,7 +48,8 @@
         "EXPO_PUBLIC_AURORA_INTENTS_API_BASE_URL": "https://intents-connect-alpha-api.aurora.dev",
         "EXPO_PUBLIC_AURORA_INTENTS_PROXY_URL": "https://cherrymoney.co.uk/api/aurora-intents/",
         "EXPO_PUBLIC_AURORA_BASE_RPC_URL": "https://mainnet.base.org",
-        "EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL": "https://monadscan.com"
+        "EXPO_PUBLIC_MONAD_MAINNET_EXPLORER_URL": "https://monadscan.com",
+        "EXPO_PUBLIC_NANSEN_PROXY_URL": "https://cherrymoney.co.uk/api/nansen/payment-intelligence/"
       }
     }
   },

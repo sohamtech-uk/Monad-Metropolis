@@ -1,5 +1,7 @@
 name: Hostinger Nansen release prepared
 
+# Triggered only from the dedicated one-time release branch.
+
 on:
   push:
     branches: [ops/hostinger-nansen-ready-to-run]

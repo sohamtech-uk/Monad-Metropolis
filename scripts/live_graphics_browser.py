@@ -21,8 +21,11 @@ transfer_topic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523
 
 def payload(start=100):
     end = start + 32
+    # Archive height is a network property, not the end of this particular query.
+    # Keep it stable when discovery pins a slightly earlier replay start, so the
+    # healthy fixture does not accidentally simulate an archive rollback.
     data = {'source': 'envio-hypersync', 'network': 'monad-testnet', 'chainId': 10143,
-        'asset': asset, 'registry': registry, 'finality': 'provisional', 'archiveHeight': end,
+        'asset': asset, 'registry': registry, 'finality': 'provisional', 'archiveHeight': 132,
         'fromBlock': start, 'nextBlock': end, 'toBlock': end, 'complete': True,
         'observedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'queryMs': 84,
         'blocks': [{'number': n, 'hash': hexhash(n), 'parent_hash': hexhash(n - 1), 'timestamp': 1800000000}
@@ -118,6 +121,8 @@ with sync_playwright() as p:
         moving.goto('https://graphics-fixture.test/')
         expect(moving.get_by_text('Transfer observed · recorded', exact=True)).to_be_visible(timeout=15000)
         moving.wait_for_timeout(7200)
+        expect(moving.get_by_text('Transfer observed · recorded', exact=True)).to_be_visible()
+        expect(moving.get_by_text('RECHECK REQUIRED', exact=True)).to_have_count(0)
         moving.get_by_role('button', name='Pause live observations', exact=True).click()
         expect(moving.get_by_text('PAUSED', exact=True)).to_be_visible()
         moving.wait_for_timeout(500)
@@ -126,7 +131,7 @@ with sync_playwright() as p:
         assert all(item['method'] == 'GET' for item in requests)
         (out / 'result.json').write_text(json.dumps({'passed': True, 'fixtureDataOnly': True,
             'livePayments': 0, 'checks': ['auto polling from actual-shaped submitted hash', 'match before RPC receipt',
-            'pin discovered block', 'genuine zero-event block tiles', 'inspect full block hash',
+            'pin discovered block with stable archive height', 'genuine zero-event block tiles', 'inspect full block hash',
             'no fabricated reference/index match', 'outage revokes highlights', 'pause stops reads',
             '320/390px no overflow', '44px block targets', 'OS reduced-motion respected',
             'manual motion pause', 'data-triggered motion recording with fixture banner'],

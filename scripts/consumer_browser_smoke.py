@@ -47,6 +47,14 @@ with sync_playwright() as playwright:
         expect(button('Pay a supplier')).to_be_visible()
         expect(tab('Home')).to_have_attribute('aria-selected', 'true')
         expect(page.get_by_text('No confirmed supplier payment in this session yet.', exact=True)).to_be_visible()
+        expect(button('Open Nansen AI')).to_be_visible()
+        button('Open Nansen AI').click()
+        expect(page.get_by_text('Know the recipient before you pay.', exact=True)).to_be_visible()
+        expect(page.get_by_text('Nansen AI track', exact=True)).to_be_visible()
+        expect(page.get_by_text('Powered by Nansen API', exact=True)).to_be_visible()
+        expect(page.get_by_label('Monad recipient address', exact=True)).to_be_visible()
+        expect(tab('Pay')).to_have_attribute('aria-selected', 'true')
+        tab('Home').click()
         page.screenshot(path=str(out / 'home-desktop.png'))
         tab('Activity').click()
         expect(page.get_by_text('No confirmed supplier payment in this session', exact=True)).to_be_visible()
@@ -140,7 +148,7 @@ with sync_playwright() as playwright:
         (out / 'result.json').write_text(json.dumps({'passed': True, 'paymentsExecuted': 0,
             'mode': 'actual compiled Expo app with local assets and external traffic blocked',
             'checks': ['customer home', 'truthful session-only activity', 'mainnet consent boundary',
-                'network/draft/payment gates', 'Google sign-in primary', 'advanced credentials collapsed',
+                'Nansen AI direct web entry', 'network/draft/payment gates', 'Google sign-in primary', 'advanced credentials collapsed',
                 'demo fixture explicitly labelled', 'full OAuth return routing/fragment cleanup',
                 'HyperSync outage is not LIVE', 'mainnet wallet filter', 'existing labs remain gated',
                 '320/390px overflow', '44px navigation targets', 'selected/expanded accessibility states',

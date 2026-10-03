@@ -1,19 +1,20 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Image, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Image, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import SupplierApp from "./App";
 import { AuroraIntentsCard } from "./src/aurora/AuroraIntentsCard";
 import { ConsumerPayments } from "./src/consumer/ConsumerPayments";
 import { EnvioLiveScreen } from "./src/envio/LiveHyperSyncCard";
+import { NansenRecipientIntelligence } from "./src/nansen/NansenRecipientIntelligence";
 import type { PaymentReceipt } from "./src/experience/model";
 import { receiptStage } from "./src/experience/model";
 import { Action, Badge, Disclosure, Notice, ReceiptCard, palette, ui } from "./src/experience/ui";
 
-type Surface = "home" | "pay" | "supplier" | "aurora" | "activity" | "more" | "envio" | "labs";
+type Surface = "home" | "pay" | "supplier" | "aurora" | "nansen" | "activity" | "more" | "envio" | "labs";
 const NAV = [{ key: "home", label: "Home", icon: "⌂" }, { key: "pay", label: "Pay", icon: "↗" },
   { key: "activity", label: "Activity", icon: "≋" }, { key: "more", label: "More", icon: "⋯" }] as const;
 function navParent(surface: Surface) {
-  return surface === "supplier" || surface === "aurora" ? "pay" : surface === "envio" || surface === "labs" ? "more" : surface;
+  return surface === "supplier" || surface === "aurora" || surface === "nansen" ? "pay" : surface === "envio" || surface === "labs" ? "more" : surface;
 }
 function initialSurface(): Surface {
   // Mount the existing one-time-code exchange immediately on an OAuth return.
@@ -31,6 +32,7 @@ function ProductShell() {
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
   const [busy, setBusy] = useState(false);
   const [mainnetAccepted, setMainnetAccepted] = useState(false);
+  const [nansenAddress, setNansenAddress] = useState("");
   const [keyboard, setKeyboard] = useState(false);
   useEffect(() => {
     const shown = Keyboard.addListener("keyboardDidShow", () => setKeyboard(true));
@@ -92,6 +94,8 @@ function ProductShell() {
               action="Open supplier payment" onPress={() => go("supplier")} />
             <RouteCard title="Pay from another chain" tag="MAINNET BETA" description="Preview Base USDC to Monad USDC. This route uses real funds and has a separate approval flow."
               action="Explore cross-chain payment" onPress={() => go("aurora")} warning />
+            <RouteCard title="Nansen AI · Recipient intelligence" tag="NANSEN AI" description="Inspect a Monad recipient with Nansen-powered portfolio, activity and related-wallet context before you pay. No transaction is created."
+              action="Open Nansen AI" onPress={() => go("nansen")} />
           </View>
           <View style={ui.card}>
             <View style={styles.sectionHeading}><Text accessibilityRole="header" style={ui.heading}>Your payment activity</Text><Badge>This session</Badge></View>
@@ -110,6 +114,28 @@ function ProductShell() {
             action="Open supplier payment" onPress={() => go("supplier")} />
           <RouteCard title="Pay from another chain" tag="MAINNET BETA" description="Currently Base USDC → Monad USDC only. Fees reduce the destination amount; review the quote before funding."
             action="Explore cross-chain payment" onPress={() => go("aurora")} warning />
+          <RouteCard title="Nansen AI · Recipient intelligence" tag="NANSEN AI" description="Check a Monad address with Nansen before entering a payment flow. This read-only screen does not sign, fund or send anything."
+            action="Open Nansen AI" onPress={() => go("nansen")} />
+        </ScrollView>)}
+        {panel("nansen", <ScrollView contentContainerStyle={ui.page} keyboardShouldPersistTaps="handled">
+          <Text style={ui.eyebrow}>NANSEN AI · MONAD</Text>
+          <Text accessibilityRole="header" style={ui.title}>Know the recipient before you pay.</Text>
+          <Text style={ui.body}>Enter a public Monad address to load Nansen-powered portfolio, recent activity and related-wallet context. This is read-only intelligence and does not create or approve a payment.</Text>
+          <View style={ui.card}>
+            <Text style={ui.label}>Monad recipient address</Text>
+            <TextInput
+              accessibilityLabel="Monad recipient address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              onChangeText={setNansenAddress}
+              placeholder="0x…"
+              style={styles.nansenInput}
+              value={nansenAddress}
+            />
+            <Text style={ui.small}>Public blockchain address only. Never paste a seed phrase, private key or API token.</Text>
+          </View>
+          <NansenRecipientIntelligence address={nansenAddress} />
+          <Action secondary label="Continue to cross-chain payment" onPress={() => go("aurora")} />
         </ScrollView>)}
         {visited.has("supplier") ? panel("supplier", <SupplierApp active={surface === "supplier"} onReceipt={setReceipt} onBusyChange={setBusy} />) : null}
         {visited.has("aurora") ? panel("aurora", <ScrollView contentContainerStyle={ui.page} keyboardShouldPersistTaps="handled">
@@ -200,5 +226,7 @@ const styles = StyleSheet.create({
   heroSteps: { width: 260, flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "#36594B", paddingLeft: 25, justifyContent: "center", gap: 21 },
   heroStep: { flexDirection: "row", alignItems: "center", gap: 12 }, heroStepNumber: { fontSize: 13, color: "#B8D4C5", fontWeight: "800" }, heroStepText: { flex: 1, fontSize: 14, lineHeight: 21, color: "#FFFFFF", fontWeight: "600" },
   sectionHeading: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between", alignItems: "center" },
-  cards: { gap: 16 }, routeCard: { flexGrow: 1, flexShrink: 1, minWidth: 0 }, busy: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: palette.amberSoft },
+  cards: { gap: 16 }, routeCard: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  nansenInput: { minHeight: 52, borderWidth: 1, borderColor: palette.line, borderRadius: 12, backgroundColor: palette.surface, color: palette.ink, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12 },
+  busy: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: palette.amberSoft },
 });

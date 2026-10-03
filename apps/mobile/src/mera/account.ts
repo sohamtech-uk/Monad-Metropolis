@@ -16,6 +16,7 @@ import type { PasskeyError } from "react-native-passkey";
 import type { LocalAccount } from "viem";
 
 import { rpId } from "./config";
+import { fundingErrorMessage } from "./fundingErrors";
 
 const RP_NAME = "Cherry Pay Global";
 const USER_NAME = "cherry-pay-account";
@@ -141,6 +142,9 @@ function deriveLiveAccount(result: PrfResult): MeraLiveAccount {
 }
 
 function describeMeraError(error: unknown): string {
+  const funding = fundingErrorMessage(error);
+  if (funding !== null) return funding;
+
   if (isMeraError(error)) {
     switch (error.code) {
       case "PRF_UNAVAILABLE":

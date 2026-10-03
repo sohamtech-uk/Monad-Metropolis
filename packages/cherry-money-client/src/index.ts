@@ -4,6 +4,24 @@ export type CherryMoneyClientOptions = Readonly<{
   fetchImpl?: typeof fetch;
 }>;
 
+export type CherryMoneyGoogleExchangeResult = Readonly<{
+  token: string;
+  authMethod: "google";
+  user: Readonly<{
+    company: string;
+    currency: string;
+    email: string;
+    name: string;
+    companyId: string;
+  }>;
+}>;
+
+export type CherryMoneyGoogleExchangeOptions = Readonly<{
+  baseUrl: string;
+  code: string;
+  fetchImpl?: typeof fetch;
+}>;
+
 export type CherryMoneyCompany = Readonly<{
   id: string;
   name: string;
@@ -75,6 +93,10 @@ export class CherryMoneyClient {
     return parseBootstrap(raw);
   }
 
+  async logout(): Promise<void> {
+    await this.request("/api/logout");
+  }
+
   async createPaymentDraft(
     input: CreatePaymentDraftInput,
   ): Promise<CreatePaymentDraftResult> {
@@ -127,6 +149,117 @@ export class CherryMoneyClient {
 
     return payload;
   }
+}
+
+function buildCherryMoneyGoogleLoginUrl(
+  baseUrl: string,
+  returnOrigin: string,
+): string {
+  const apiBase = normaliseHttpsBaseUrl(baseUrl);
+  const origin = normaliseReturnOrigin(returnOrigin);
+  const url = new URL("/webmcp/google/redirect", apiBase + "/");
+  url.searchParams.set("return_origin", origin);
+  return url.toString();
+}
+
+async function exchangeCherryMoneyGoogleCode({
+  baseUrl,
+  code,
+  fetchImpl = fetch,
+}: CherryMoneyGoogleExchangeOptions): Promise<CherryMoneyGoogleExchangeResult> {
+  const apiBase = normaliseHttpsBaseUrl(baseUrl);
+  const value = code.trim();
+
+  if (!/^[A-Za-z0-9]{64}$/.test(value)) {
+    throw new Error("Cherry Money Google sign-in code is invalid.");
+  }
+
+  const response = await fetchImpl(apiBase + "/api/webmcp/google/exchange", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ code: value }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
+
+  if (!response.ok) {
+    const message =
+      typeof payload.message === "string"
+        ? payload.message
+        : firstValidationMessage(payload.errors) ??
+          "Cherry Money Google sign-in could not be completed.";
+    throw new Error(message);
+  }
+
+  if (!isRecord(payload.user)) {
+    throw new Error("Cherry Money Google sign-in returned an invalid user.");
+  }
+
+  return Object.freeze({
+    token: requiredString(payload.token, "token"),
+    authMethod: "google",
+    user: Object.freeze({
+      company: requiredString(payload.user.company, "user.company"),
+      currency: requiredString(payload.user.currency, "user.currency"),
+      email: requiredString(payload.user.email, "user.email"),
+      name: requiredString(payload.user.name, "user.name"),
+      companyId: requiredIdentifier(payload.user.company_id, "user.company_id"),
+    }),
+  });
+}
+
+function normaliseHttpsBaseUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/$/, "");
+  let parsed: URL;
+
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error("Cherry Money API base URL must be a valid URL.");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("Cherry Money API base URL must use HTTPS.");
+  }
+
+  return parsed.origin;
+}
+
+function normaliseReturnOrigin(value: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(value.trim());
+  } catch {
+    throw new Error("Cherry Money return origin is invalid.");
+  }
+
+  const localhost =
+    parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+
+  if (parsed.protocol !== "https:" && !(localhost && parsed.protocol === "http:")) {
+    throw new Error("Cherry Money return origin must use HTTPS.");
+  }
+
+  return parsed.origin;
+}
+
+function firstValidationMessage(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+
+  for (const item of Object.values(value)) {
+    if (Array.isArray(item)) {
+      const first = item.find((message) => typeof message === "string");
+      if (typeof first === "string" && first.trim()) return first.trim();
+    }
+  }
+
+  return null;
 }
 
 function parseBootstrap(value: Record<string, unknown>): CherryMoneyBootstrap {
@@ -198,6 +331,18 @@ function parsePaymentDraft(
   });
 }
 
+function requiredIdentifier(value: unknown, label: string): string {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return value.toString();
+  }
+
+  throw new Error("Cherry Money response is missing " + label + ".");
+}
+
 function requiredString(value: unknown, label: string): string {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error("Cherry Money response is missing " + label + ".");
@@ -209,3 +354,8 @@ function requiredString(value: unknown, label: string): string {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
+
+export {
+  buildCherryMoneyGoogleLoginUrl,
+  exchangeCherryMoneyGoogleCode,
+};

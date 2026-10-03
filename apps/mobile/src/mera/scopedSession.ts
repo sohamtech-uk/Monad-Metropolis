@@ -23,6 +23,7 @@ import {
 } from "viem";
 
 import type { MeraLiveAccount } from "./account";
+import { assertPaymentRecipient, checkContractGas } from "./transactionPreflight";
 import { publishTransferProgress, type TransferProgress } from "./transferProgress";
 
 type SessionEndReason =
@@ -103,6 +104,13 @@ class ScopedMeraPaymentSession {
     ) {
       liveAccount.end();
       throw new Error("Mera session address does not match the derived account.");
+    }
+
+    try {
+      assertPaymentRecipient(scope.recipient, { ausdAddress: scope.asset });
+    } catch (error) {
+      liveAccount.end();
+      throw error;
     }
 
     this.liveAccount = liveAccount;
@@ -189,6 +197,7 @@ class ScopedMeraPaymentSession {
     nowMs: number = Date.now(),
   ): Promise<AusdTransferResult> {
     this.validateRequest(request, nowMs);
+    assertPaymentRecipient(request.recipient, config);
 
     if (config.chainId !== this.scope.chainId) {
       throw new SessionPolicyViolation(
@@ -237,7 +246,7 @@ class ScopedMeraPaymentSession {
 
       if (alreadyCorrelated) {
         throw new Error(
-          "This Cherry Money payment reference is already correlated to a prior settlement. Create or select a new payment draft before sending again.",
+          "This Cherry Money payment reference is already correlated to a prior settlement. Do not pay it again. Use the original transaction for verification, or create/select a new draft for a separate test payment.",
         );
       }
     }
@@ -279,8 +288,17 @@ class ScopedMeraPaymentSession {
       args: [recipient, request.amount],
     });
 
+    const gasBudget = await checkContractGas({
+      estimateGas: () => publicClient.estimateContractGas(simulation.request),
+      estimateFees: () => publicClient.estimateFeesPerGas({ type: "eip1559" }),
+      getBalance: () => publicClient.getBalance({ address: sender, blockTag: "pending" }),
+      action: "send AUSD",
+      payer: sender,
+    });
+    // RPC estimates may outlive the five-minute passkey authorisation.
+    this.validateRequest(request, Date.now());
     const submittedAtMs = Date.now();
-    const hash = await walletClient.writeContract(simulation.request);
+    const hash = await walletClient.writeContract({ ...simulation.request, ...gasBudget });
 
     // The actual transaction hash is now known, before receipt/indexer waits.
     // Only read-only public metadata is published; view failures are isolated.
@@ -393,7 +411,7 @@ class ScopedMeraPaymentSession {
       });
     }
 
-    if (this.expireIfNeeded(Date.now())) {
+    if (this.endReason !== null || this.expireIfNeeded(Date.now())) {
       return Object.freeze({
         status: "failed",
         registryAddress,
@@ -403,7 +421,7 @@ class ScopedMeraPaymentSession {
         correlationBlockNumber: null,
         correlationUrl: null,
         error:
-          "The Mera session expired after the AUSD payment confirmed and before the correlation transaction could be signed.",
+          "The Mera session ended after the AUSD payment confirmed and before the correlation transaction could be signed. Do not resend the AUSD payment.",
       });
     }
 
@@ -488,9 +506,21 @@ class ScopedMeraPaymentSession {
         ],
       });
 
-      const correlationTxHash = await walletClient.writeContract(
-        simulation.request,
-      );
+      const gasBudget = await checkContractGas({
+        estimateGas: () => publicClient.estimateContractGas(simulation.request),
+        estimateFees: () => publicClient.estimateFeesPerGas({ type: "eip1559" }),
+        getBalance: () => publicClient.getBalance({ address: this.liveAccount.account.address, blockTag: "pending" }),
+        action: "record the already-confirmed payment's correlation (do not resend the AUSD)",
+        payer: this.liveAccount.account.address,
+      });
+      this.expireIfNeeded(Date.now());
+      if (this.endReason !== null) {
+        throw new Error("The Mera session ended during the fee check. The AUSD payment is already confirmed; do not resend it.");
+      }
+      const correlationTxHash = await walletClient.writeContract({
+        ...simulation.request,
+        ...gasBudget,
+      });
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: correlationTxHash,
         confirmations: 1,
@@ -530,6 +560,7 @@ class ScopedMeraPaymentSession {
   }
 
   async requestTestAusd(config: MonadRuntimeConfig): Promise<FaucetResult> {
+    this.expireIfNeeded(Date.now());
     if (this.endReason !== null) {
       throw new SessionPolicyViolation(
         "SESSION_EXPIRED",
@@ -550,10 +581,16 @@ class ScopedMeraPaymentSession {
     });
 
     const liveChainId = await publicClient.getChainId();
-    if (liveChainId !== this.scope.chainId) {
+    if (liveChainId !== this.scope.chainId || config.chainId !== this.scope.chainId) {
       throw new SessionPolicyViolation(
         "CHAIN_CHANGED",
         "The RPC is connected to a different network.",
+      );
+    }
+    if (getAddress(config.ausdAddress) !== this.scope.asset) {
+      throw new SessionPolicyViolation(
+        "ASSET_CHANGED",
+        "The AUSD token no longer matches the approved session.",
       );
     }
 
@@ -582,7 +619,21 @@ class ScopedMeraPaymentSession {
       args: [account],
     });
 
-    const hash = await walletClient.writeContract(simulation.request);
+    const gasBudget = await checkContractGas({
+      estimateGas: () => publicClient.estimateContractGas(simulation.request),
+      estimateFees: () => publicClient.estimateFeesPerGas({ type: "eip1559" }),
+      getBalance: () => publicClient.getBalance({ address: account, blockTag: "pending" }),
+      action: "request Agora test AUSD",
+      payer: account,
+    });
+    this.expireIfNeeded(Date.now());
+    if (this.endReason !== null) {
+      throw new SessionPolicyViolation(
+        "SESSION_EXPIRED",
+        "The passkey session ended during the fee check. Approve a new session before requesting test AUSD.",
+      );
+    }
+    const hash = await walletClient.writeContract({ ...simulation.request, ...gasBudget });
     const receipt = await publicClient.waitForTransactionReceipt({
       hash,
       confirmations: 1,

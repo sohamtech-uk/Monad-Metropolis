@@ -99,10 +99,23 @@ test("observer errors cannot propagate to a submitted payment and metadata is im
   assert.equal(Object.isFrozen(progressForReference(payment.reference)?.receipt), true);
   bad(); good();
 });
-test("source regression: broadcast metadata is emitted before the receipt wait", () => {
+test("source regression: checked gas precedes broadcast and live metadata precedes the receipt wait", () => {
   const source = readFileSync(new URL("../apps/mobile/src/mera/scopedSession.ts", import.meta.url), "utf8");
   const send = source.slice(source.indexOf("async sendAusdTransfer("), source.indexOf("async retrySettlementCorrelation("));
-  assert.ok(send.indexOf("publishTransferProgress(progress)") > send.indexOf("walletClient.writeContract(simulation.request)"));
-  assert.ok(send.indexOf("publishTransferProgress(progress)") < send.indexOf("waitForTransactionReceipt"));
+  const budget = send.indexOf("await checkContractGas(");
+  const revalidate = send.indexOf("this.validateRequest(request, Date.now())");
+  const broadcast = send.indexOf("await walletClient.writeContract({ ...simulation.request, ...gasBudget })");
+  const emit = send.indexOf("publishTransferProgress(progress)");
+  const receipt = send.indexOf("await publicClient.waitForTransactionReceipt(");
+  const receiptEmit = send.indexOf("publishTransferProgress(progress)", emit + 1);
+  const correlation = send.indexOf("await this.recordSettlementCorrelation(");
+  const correlationEmit = send.indexOf("publishTransferProgress({ ...progress, correlation:");
+  // Explicit existence checks avoid an indexOf(-1) making ordering assertions pass.
+  for (const index of [budget, revalidate, broadcast, emit, receipt, receiptEmit, correlation, correlationEmit]) {
+    assert.ok(index >= 0, "Merged payment flow must retain every preflight and live-observation stage");
+  }
+  assert.ok(budget < revalidate && revalidate < broadcast);
+  assert.ok(broadcast < emit && emit < receipt);
+  assert.ok(receipt < receiptEmit && receiptEmit < correlation && correlation < correlationEmit);
   assert.equal((send.match(/walletClient\.writeContract/g) ?? []).length, 1);
 });

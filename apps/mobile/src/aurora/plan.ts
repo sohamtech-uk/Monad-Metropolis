@@ -5,6 +5,7 @@ import type {
 import {
   getAddress,
   parseUnits,
+  zeroAddress,
   type Address,
 } from "viem";
 
@@ -28,6 +29,14 @@ export type AuroraPaymentPlanInput = Readonly<{
   depositViaWallet: boolean;
 }>;
 
+export function auroraRecipient(value: string): Address {
+  const recipient = getAddress(value.trim());
+  if (recipient === zeroAddress || recipient === getAddress(MONAD_USDC_ADDRESS)) {
+    throw new Error("Enter the recipient's Monad wallet address, not the USDC token contract or zero address.");
+  }
+  return recipient;
+}
+
 export const CHERRY_PAY_MONAD_USDC_RECIPE: Recipe<CherryPayMonadParams> = {
   id: "cherry-pay-monad-usdc",
   intent: "cherry_pay_cross_chain_payment",
@@ -43,7 +52,7 @@ export const CHERRY_PAY_MONAD_USDC_RECIPE: Recipe<CherryPayMonadParams> = {
     {
       to: MONAD_USDC_ADDRESS,
       functionSignature: "transfer(address,uint256)",
-      parameters: [recipient, amount],
+      parameters: [auroraRecipient(recipient), amount],
       value: "0",
       metadata: {
         product: "Cherry Pay Global",
@@ -78,7 +87,7 @@ export function parseAuroraUsdcAmount(value: string): bigint {
 export function buildBaseUsdcToMonadPaymentPlan(
   input: AuroraPaymentPlanInput,
 ): ExecutionPlan<CherryPayMonadParams> {
-  const recipient = getAddress(input.recipient.trim());
+  const recipient = auroraRecipient(input.recipient);
   const amount = parseAuroraUsdcAmount(input.amount);
 
   return {

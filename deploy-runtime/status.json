@@ -1,13 +1,11 @@
 {
-  "stage": "awaiting_encrypted_credential",
+  "stage": "failed",
   "run_id": "37122912113",
   "branch": "ops/hostinger-nansen-ready-to-run",
   "site": "https://metropolis.cherrymoney.co.uk",
-  "time_utc": "2026-10-03T12:27:13Z",
-  "tls_hostname": "hstgr.io",
-  "certificate_sha256": "79a7c9aeaad8855c82f58598597b931b10429afec6234b621588f4e937b36dee",
-  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAppBD3cWUDJ17wdA/uALu\nam9CvO0a3YHCRUNy8qU/jRvf6E8ht2rO+1zrhjcFdKwFf6bZxO97X8NTEcZH2ZKO\nJbZoRd6B0rArdFEg1xeAzq6KrNV5xTH0ceTDrdy+1EyNEj8VzfU0V6HzugIIT76d\nApczSrg5Mq5MSU07ryHdmGljGixX2W1DgftDF9c3knm3GKhgenDEegmeD3NlmMBa\nnvya+tpgb9s7AxDXjKnoD6DD31fOcufC+aH5r1/8QXbmGnZqOA9FKfSXGlVy3kn8\ntjg6CtPRZSvSpMi4SBSAfqZYd/g9Mr2a0BrjzbLPymKfOBpB1XA0KrXrnk1V/Xh+\nusVtnXbBSfXwhh0ROXehviadO5KseWM2+2pkuOWyBvul9ponHA2jn9EldJRe2C5d\nyIOw7Q7lsgA8o6E/NN+ihjsWCQKDxWKm7NkYSHa3ug/ceMBWEPy9kaL/ATHXOcUZ\nULx+YLb0gNDdn+GgO5O7md/8rGNsBPS7bxM8xa9X9FBPAgMBAAE=\n-----END PUBLIC KEY-----\n",
-  "credential_path": "deploy-runtime/credentials-37122912113.json",
+  "time_utc": "2026-10-03T12:34:28Z",
+  "error": "RuntimeError: Timed out awaiting the encrypted run credential; no upload attempted.",
+  "note": "Check workflow logs. Upload is rolled back when a post-upload check fails.",
   "source_run_id": 37120932666,
   "source_commit": "35fe128dc6e51baef2394a3e2ca48d940b69638b"
 }

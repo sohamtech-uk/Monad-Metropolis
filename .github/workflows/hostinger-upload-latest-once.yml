@@ -1,0 +1,59 @@
+name: Hostinger latest main release
+
+on:
+  push:
+    branches: [ops/hostinger-latest-20261004]
+    paths:
+      - .github/workflows/hostinger-upload-latest-once.yml
+      - scripts/deploy-hostinger-once.py
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: hostinger-metropolis-latest-upload
+  cancel-in-progress: true
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: '37162789430'
+      SOURCE_COMMIT: '4179e4dfd66f219e8f8f18beb6e4bfe2e7675c82'
+    steps:
+      - name: Check out deployment tooling
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate exact successful main build
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" > "${RUNNER_TEMP}/source-run.json"
+          jq -e --arg sha "${SOURCE_COMMIT}" '.status == "completed" and .conclusion == "success" and .head_branch == "main" and .head_sha == $sha' "${RUNNER_TEMP}/source-run.json" >/dev/null
+          gh run download "${SOURCE_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name metropolis-web --dir "${RUNNER_TEMP}/web"
+          test -f "${RUNNER_TEMP}/web/index.html"
+          test -f "${RUNNER_TEMP}/web/.well-known/assetlinks.json"
+
+      - name: Check deployment tooling
+        run: python3 -m py_compile scripts/deploy-hostinger-once.py scripts/run_hostinger_upload.py
+
+      - name: Require Hostinger Actions secret
+        shell: bash
+        env:
+          HOSTINGER_FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ -n "${HOSTINGER_FTP_PASSWORD}" ]] || {
+            echo "::error::HOSTINGER_FTP_PASSWORD is not configured."
+            exit 1
+          }
+
+      - name: Upload over hostname-verified FTPS and verify live website
+        env:
+          HOSTINGER_FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+        run: python3 scripts/run_hostinger_upload.py

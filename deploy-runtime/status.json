@@ -1,27 +1,25 @@
 {
-  "stage": "deployed",
-  "run_id": "36845723359",
-  "branch": "ops/hostinger-upload-20261001",
+  "stage": "uploading",
+  "run_id": "37217321329",
+  "branch": "ops/hostinger-latest-20261004",
   "site": "https://metropolis.cherrymoney.co.uk",
-  "time_utc": "2026-10-01T09:55:38Z",
-  "checks": {
-    "root_http_200": true,
-    "root_matches_tested_build": true,
-    "all_static_assets_match": true,
-    "passkey_files_unchanged": true,
-    "graphql": true,
-    "htaccess_and_graphql_untouched": true
-  },
-  "uploaded_files": [
-    "_expo/static/js/web/index-40d24dcb264402bd0596f06bddff0cde.js",
-    "_expo/static/js/web/native-035945efb6d0c5d54eeb70e42e8b4b9b.js",
+  "time_utc": "2026-10-04T16:35:37Z",
+  "tls_hostname": "hstgr.io",
+  "source_run_id": 37162789430,
+  "source_commit": "4179e4dfd66f219e8f8f18beb6e4bfe2e7675c82",
+  "files": [
+    "_expo/static/js/web/empty-module-d9afb8fca0327dddec8062152c6383fb.js",
+    "_expo/static/js/web/index-ce5ff223b2d51113047d9b346d7246c1.js",
+    "_expo/static/js/web/mine-40c58909c0dc33130d8f8835cd4e7a66.js",
+    "_expo/static/js/web/native-6148277622553dd7cb8e70838c25a98c.js",
     "favicon.ico",
     "metadata.json",
     "index.html"
   ],
-  "source_run_id": 36845540134,
-  "source_commit": "cc3ab12de6dca0c419e764015032484664bc856c",
-  "backup_path": "/.cherry-deployment-backups/36845723359",
-  "placeholder_moved": false,
-  "note": "No payments executed. Interactive passkey/payment testing remains a user action."
+  "graphql_before": true,
+  "preserved": [
+    ".htaccess",
+    "graphql/",
+    ".well-known/"
+  ]
 }

@@ -1,9 +1,14 @@
 name: Hostinger Nansen release prepared
 
+# Triggered only from the dedicated one-time release branch.
+
 on:
+  workflow_dispatch:
   push:
     branches: [ops/hostinger-nansen-ready-to-run]
-    paths: [.github/workflows/hostinger-upload-nansen-once.yml]
+    paths:
+      - .github/workflows/hostinger-upload-nansen-once.yml
+      - scripts/deploy-hostinger-once.py
 
 permissions:
   contents: write
@@ -11,7 +16,7 @@ permissions:
 
 concurrency:
   group: hostinger-metropolis-nansen-upload
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   upload:
@@ -19,8 +24,8 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      SOURCE_RUN_ID: '37120932666'
-      SOURCE_COMMIT: '35fe128dc6e51baef2394a3e2ca48d940b69638b'
+      SOURCE_RUN_ID: '37162789430'
+      SOURCE_COMMIT: '4179e4dfd66f219e8f8f18beb6e4bfe2e7675c82'
     steps:
       - name: Check out deployment tooling
         uses: actions/checkout@v4
@@ -40,5 +45,18 @@ jobs:
       - name: Check deployment tooling
         run: python3 -m py_compile scripts/deploy-hostinger-once.py scripts/run_hostinger_upload.py
 
+      - name: Require Hostinger Actions secret
+        shell: bash
+        env:
+          HOSTINGER_FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ -n "${HOSTINGER_FTP_PASSWORD}" ]] || {
+            echo "::error::HOSTINGER_FTP_PASSWORD is not configured. Add it as a GitHub Actions secret; this workflow no longer waits on a runner for credentials."
+            exit 1
+          }
+
       - name: Upload over hostname-verified FTPS and verify live website
+        env:
+          HOSTINGER_FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         run: python3 scripts/run_hostinger_upload.py

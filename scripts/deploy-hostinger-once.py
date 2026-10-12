@@ -309,6 +309,16 @@ def main():
                                     check=True, capture_output=True, text=True).stdout
         try:
             tls_name, fingerprint = discover_tls_name()
+
+            # Preferred CI path: use an Actions secret directly so a runner does
+            # not sit idle waiting for a credential handoff. The secret is
+            # masked and never written to the repository or artifacts.
+            secret_password = os.environ.get('HOSTINGER_FTP_PASSWORD', '').strip()
+            if secret_password:
+                print('::add-mask::' + secret_password.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+                deploy(secret_password, tls_name, fingerprint)
+                return
+
             publish('awaiting_encrypted_credential', tls_hostname=tls_name,
                     certificate_sha256=fingerprint, public_key_pem=public_key,
                     credential_path=CREDENTIAL_PATH,

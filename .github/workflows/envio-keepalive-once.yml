@@ -1,0 +1,36 @@
+name: Envio keepalive once
+
+on:
+  push:
+    branches: [ops/envio-keepalive-20261019]
+    paths: [.github/workflows/envio-keepalive-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send read-only GraphQL request to Envio
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint='https://indexer.dev.hyperindex.xyz/e8dc15f/v1/graphql'
+          payload='{"query":"{ __typename }"}'
+          body="$(curl --fail-with-body --silent --show-error --max-time 30             -H 'Content-Type: application/json'             -H 'Accept: application/json'             --data "$payload" "$endpoint")"
+          echo "$body"
+          jq -e '.data.__typename == "query_root" or .data.__typename == "Query"' <<<"$body" >/dev/null
+          echo "ENVIO_KEEPALIVE_POST: PASS"
+
+      - name: Verify stable public proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint='https://metropolis.cherrymoney.co.uk/graphql/'
+          payload='{"query":"{ __typename }"}'
+          body="$(curl --fail-with-body --silent --show-error --max-time 30             -H 'Content-Type: application/json'             -H 'Accept: application/json'             --data "$payload" "$endpoint")"
+          echo "$body"
+          jq -e '.data.__typename == "query_root" or .data.__typename == "Query"' <<<"$body" >/dev/null
+          echo "ENVIO_PUBLIC_PROXY_POST: PASS"
